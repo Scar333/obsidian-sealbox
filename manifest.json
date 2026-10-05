@@ -1,0 +1,10 @@
+{
+  "id": "sealbox",
+  "name": "Sealbox",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Encrypt notes and attachments with a single password, and keep logins in a built-in secrets manager. Works on desktop and mobile.",
+  "author": "Scar333",
+  "authorUrl": "https://github.com/Scar333",
+  "isDesktopOnly": false
+}

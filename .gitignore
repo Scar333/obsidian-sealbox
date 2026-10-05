@@ -1,0 +1,5 @@
+node_modules/
+main.js
+*.tmp
+*.sealbox-tmp
+*.sealbox-old

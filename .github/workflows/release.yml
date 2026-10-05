@@ -1,0 +1,49 @@
+name: Release
+
+# Pushing a tag that is exactly the version number ("0.1.0", no "v") builds the
+# plugin and opens a draft release with the three files Obsidian needs.
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: node --version && npm --version
+      - run: npm ci
+
+      # Split out rather than one "npm run check": when something fails, the
+      # Actions summary names the step instead of making you open the log.
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run verify   # fails if the bundle gained network or logging
+
+      - name: Check the tag matches manifest.json
+        run: |
+          manifest_version=$(node -p "require('./manifest.json').version")
+          if [ "$manifest_version" != "$GITHUB_REF_NAME" ]; then
+            echo "tag $GITHUB_REF_NAME does not match manifest version $manifest_version"
+            exit 1
+          fi
+
+      - name: Create draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --draft \
+            main.js manifest.json styles.css

@@ -1,0 +1,3 @@
+# Keep line endings stable for contributors on Windows.
+* text=auto eol=lf
+*.png binary

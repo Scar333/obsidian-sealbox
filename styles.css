@@ -1,0 +1,393 @@
+/* Sealbox — uses Obsidian's own theme variables so it follows light/dark. */
+
+.sealbox-muted { color: var(--text-muted); }
+.sealbox-small { font-size: var(--font-ui-smaller); }
+.sealbox-error { color: var(--text-error); }
+.sealbox-warning { color: var(--text-warning); }
+.sealbox-ok { color: var(--text-success); }
+
+.sealbox-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sealbox-field {
+  display: block;
+  margin-top: 10px;
+}
+.sealbox-field > span {
+  display: block;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.sealbox-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+/* Buttons keep their size; the input gives up the space instead. */
+.sealbox-field-row > button { flex: 0 0 auto; }
+.sealbox-field-row input { flex: 1 1 auto; min-width: 0; }
+.sealbox-field input,
+.sealbox-field textarea { width: 100%; }
+
+.sealbox-strength { margin-top: 8px; font-size: var(--font-ui-smaller); }
+.sealbox-strength[data-tone="weak"] { color: var(--text-error); }
+.sealbox-strength[data-tone="fair"] { color: var(--text-warning); }
+.sealbox-strength[data-tone="good"],
+.sealbox-strength[data-tone="strong"] { color: var(--text-success); }
+
+/* --- Locked file screen -------------------------------------------------- */
+
+.sealbox-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  padding: 48px 24px;
+  max-width: 34em;
+  margin: 0 auto;
+}
+.sealbox-locked-icon { font-size: 44px; line-height: 1; }
+/*
+ * Everything on the lock screen is centred, and its buttons have to be too. The
+ * container centres as a block on its own, but once the screen is narrow enough
+ * for the buttons to wrap — which is the normal case on a phone — each wrapped
+ * row packs to the start and the layout looks off-centre. Scoped to this screen:
+ * buttons in dialogs stay left-aligned.
+ */
+.sealbox-locked .sealbox-buttons {
+  width: 100%;
+  justify-content: center;
+}
+.sealbox-locked h2 { margin: 0; }
+
+/* --- Unlocked file view -------------------------------------------------- */
+
+.sealbox-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  position: sticky;
+  top: 0;
+  background: var(--background-primary);
+  z-index: 2;
+}
+.sealbox-header-name { font-weight: 600; }
+.sealbox-header-actions { display: flex; gap: 6px; margin-left: auto; }
+.sealbox-status { color: var(--text-muted); min-width: 11em; text-align: right; }
+
+.sealbox-body { padding: 12px; overflow: auto; }
+.sealbox-pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-monospace);
+}
+/*
+ * The editor is a textarea, not Obsidian's own editor — there is no public API to
+ * embed that in a custom view. So it borrows Obsidian's typography and readable
+ * line width to sit as close to the real thing as it can.
+ */
+.sealbox-editor {
+  display: block;
+  width: 100%;
+  max-width: var(--file-line-width);
+  margin: 0 auto;
+  min-height: calc(100vh - 160px);
+  resize: vertical;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: var(--font-text);
+  font-size: var(--font-text-size);
+  line-height: var(--line-height-normal);
+  color: var(--text-normal);
+  tab-size: 4;
+}
+.sealbox-editor:focus { outline: none; box-shadow: none; }
+.sealbox-markdown { max-width: var(--file-line-width); margin: 0 auto; }
+
+.sealbox-image-wrap { display: flex; justify-content: center; }
+.sealbox-image {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+.sealbox-image.is-zoomed {
+  max-height: none;
+  cursor: zoom-out;
+}
+
+/* --- PDF ----------------------------------------------------------------- */
+
+.sealbox-pdf-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.sealbox-pdf-pages {
+  max-height: 80vh;
+  overflow: auto;
+  background: var(--background-secondary);
+  padding: 8px;
+  border-radius: var(--radius-s);
+}
+.sealbox-pdf-page {
+  margin: 0 auto 12px;
+  max-width: 900px;
+  min-height: 60px;
+  background: var(--background-primary);
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+.sealbox-pdf-page canvas { display: block; width: 100%; height: auto; }
+
+/* --- Secrets window ----------------------------------------------------- */
+
+.sealbox-secrets-modal { width: min(1100px, 95vw); }
+.sealbox-secrets-top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.sealbox-search { flex: 1 1 auto; min-width: 0; }
+
+.sealbox-secrets-panes {
+  display: grid;
+  /*
+   * The 0 lower bound matters. A grid track defaults to a minimum of its
+   * content's intrinsic width, so one long chip ("Банковская карта") was enough
+   * to push a column wider than its share and spill the text out of the pane.
+   */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 2.4fr);
+  gap: 10px;
+  min-height: min(60vh, 520px);
+}
+.sealbox-pane {
+  overflow: auto;
+  /* Same reason: a grid item will not shrink below its content without this. */
+  min-width: 0;
+  max-height: min(60vh, 520px);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: 8px;
+}
+.sealbox-pane-title {
+  margin-bottom: 8px;
+  font-size: var(--font-ui-smaller);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+}
+.sealbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+.sealbox-row:hover { background: var(--background-modifier-hover); }
+.sealbox-row.is-selected { background: var(--background-modifier-active-hover); }
+.sealbox-row-main { min-width: 0; flex: 1 1 auto; }
+/* Group names and the like: ellipsis instead of widening the pane. */
+.sealbox-row > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sealbox-count { flex: 0 0 auto; }
+.sealbox-row-title { font-weight: 500; overflow-wrap: anywhere; }
+.sealbox-row-sub { color: var(--text-muted); overflow-wrap: anywhere; }
+.sealbox-count { color: var(--text-faint); font-size: var(--font-ui-smaller); margin-left: auto; }
+.sealbox-note { min-height: 8em; resize: vertical; }
+.sealbox-history { margin-top: 10px; }
+.sealbox-back { margin-bottom: 8px; }
+
+/* One pane at a time on a phone. */
+.sealbox-secrets-panes.is-mobile {
+  grid-template-columns: 1fr;
+}
+.sealbox-secrets-panes.is-mobile > .sealbox-pane { display: none; }
+.sealbox-secrets-panes.is-mobile > .sealbox-pane.is-active { display: block; }
+
+.sealbox-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-hover);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* --- Recovery and diagnostics ------------------------------------------- */
+
+.sealbox-recovery-key {
+  font-family: var(--font-monospace);
+  font-size: 1.05em;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: all;
+  background: var(--background-secondary);
+  padding: 10px;
+  border-radius: var(--radius-s);
+}
+.sealbox-recovery-input {
+  width: 100%;
+  font-family: var(--font-monospace);
+  min-height: 4em;
+}
+
+.sealbox-checks { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.sealbox-check { display: flex; gap: 10px; align-items: flex-start; }
+.sealbox-check-ok { color: var(--text-success); font-weight: 700; }
+.sealbox-check-fail { color: var(--text-error); font-weight: 700; }
+.sealbox-check-name { font-weight: 500; }
+
+.sealbox-threat-model {
+  margin-top: 18px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  border-radius: var(--radius-s);
+}
+
+/* A sidebar icon with nothing to act on: visibly idle rather than silently inert. */
+.sealbox-ribbon-idle { opacity: 0.45; }
+
+/* The clickable action inside a notice (the "undo" after sealing a file). */
+.sealbox-notice-action {
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* The CodeMirror editor fills the view; its typography comes from the theme
+   defined in src/views/editor/codemirror.ts, using Obsidian's own variables. */
+.sealbox-cm-host {
+  height: 100%;
+  min-height: calc(100vh - 160px);
+}
+.sealbox-cm-host .cm-editor { height: 100%; }
+
+/* --- Secrets: entry cards, templates, extra fields ----------------------- */
+
+.sealbox-card {
+  /* Flex column with a gap, so the spacing between lines is guaranteed rather
+     than inherited from whatever line-height the theme happens to set. */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  line-height: 1.4;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.sealbox-card:hover { background: var(--background-modifier-hover); }
+.sealbox-card.is-selected {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+/*
+ * Plain block, deliberately. The -webkit-line-clamp trick that was here clamps
+ * to two lines but switches the element to a -webkit-box, which drops its normal
+ * block spacing and left the card's lines sitting on top of each other.
+ */
+.sealbox-card-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sealbox-card-line {
+  min-width: 0;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sealbox-card-label { color: var(--text-faint); }
+.sealbox-card-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.sealbox-chip-static {
+  font-size: var(--font-ui-smaller);
+  padding: 1px 7px;
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  /* Truncate rather than widen the column it sits in. */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sealbox-section-title {
+  margin: 14px 0 6px;
+  font-size: var(--font-ui-smaller);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+.sealbox-field-label { flex: 0 1 11em; }
+
+/*
+ * The links and extra-fields lists. A gap here rather than margins on the rows:
+ * the "add" button is a sibling of the rows, so a row-only margin left it sitting
+ * flush against the last field.
+ */
+.sealbox-field-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+/* The button sizes to its text instead of stretching across the column. */
+.sealbox-field-list > .sealbox-add-field {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+.sealbox-field-row button.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.sealbox-template-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.sealbox-template {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.sealbox-template:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
+}
+.sealbox-template-name { font-weight: 600; }
+
+/* Quick-add reuses the entry form, so it needs room and its own scroll. */
+.sealbox-quickadd-body {
+  max-height: min(68vh, 560px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
