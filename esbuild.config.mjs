@@ -2,9 +2,14 @@ import esbuild from "esbuild";
 import process from "node:process";
 import fs from "node:fs";
 import path from "node:path";
-import builtins from "builtin-modules";
+import { builtinModules } from "node:module";
 
 const production = process.argv[2] === "production";
+
+// Node's own list, so nothing has to be installed for it. Both spellings are
+// marked external: a dependency may import either "path" or "node:path", and
+// neither exists inside Obsidian on mobile.
+const builtins = [...builtinModules, ...builtinModules.map((m) => `node:${m}`)];
 
 // Build into the repository root by default: that is where the release workflow
 // and the community catalogue expect main.js to be. Point SEALBOX_OUT at a
@@ -103,7 +108,13 @@ const pdfWorkerPlugin = {
   },
 };
 
-const banner = `/* Sealbox — built ${new Date().toISOString()}. Do not edit; see src/. */`;
+// No timestamp here. The banner is the first thing in main.js, so anything that
+// changes between builds would make the released file differ from what the same
+// sources produce — and the community directory checks exactly that. Byte-for-byte
+// reproducibility is also how anyone can verify the release was built from this
+// source and nothing else.
+const { version } = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
+const banner = `/* Sealbox ${version}. Do not edit; see src/. */`;
 
 const ctx = await esbuild.context({
   banner: { js: banner },

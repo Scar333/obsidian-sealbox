@@ -56,7 +56,7 @@ export class ShowRecoveryKeyModal extends Modal {
     input.autocapitalize = "characters";
     input.spellcheck = false;
 
-    const feedback = contentEl.createEl("div", { cls: "sealbox-small" });
+    const feedback = contentEl.createDiv({ cls: "sealbox-small" });
     const buttons = contentEl.createDiv({ cls: "sealbox-buttons" });
     const done = buttons.createEl("button", {
       text: t("recovery.show.done"),
@@ -162,7 +162,7 @@ export class EnterRecoveryKeyModal extends Modal {
 
   override onClose(): void {
     for (const el of Array.from(this.contentEl.querySelectorAll("textarea, input"))) {
-      if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) el.value = "";
+      if (el.instanceOf(HTMLTextAreaElement) || el.instanceOf(HTMLInputElement)) el.value = "";
     }
     this.contentEl.empty();
   }

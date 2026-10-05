@@ -16,11 +16,7 @@ export function noticeWithAction(
   durationMs = 15000,
 ): Notice {
   const notice = new Notice(message, durationMs);
-  // `messageEl` exists from Obsidian 1.8.7; older versions only have the
-  // deprecated `noticeEl`. Falling back keeps the notice useful either way.
-  const host: HTMLElement | undefined = notice.messageEl ?? notice.noticeEl;
-  if (!host) return notice;
-
+  const host = notice.messageEl;
   host.appendText(" ");
   const link = host.createEl("a", {
     text: actionLabel,

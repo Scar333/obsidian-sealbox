@@ -78,7 +78,7 @@ const META_COUNTER = 0;
 
 /** Give the UI thread a chance to paint between chunks. */
 function yieldToHost(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
+  return new Promise((resolve) => window.setTimeout(resolve, 0));
 }
 
 interface FileKeys {

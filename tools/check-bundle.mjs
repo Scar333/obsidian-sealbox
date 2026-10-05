@@ -122,6 +122,15 @@ async function checkBundle() {
     return;
   }
 
+  // The bundle must not carry anything that varies between builds. A build
+  // timestamp in the banner was enough to make the released main.js differ from
+  // what the same sources produce, which defeats the point of being able to
+  // check that a release matches its source.
+  const firstLine = bundle.slice(0, bundle.indexOf("\n"));
+  if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(firstLine)) {
+    fail("the bundle banner carries a timestamp, so the build is not reproducible");
+  }
+
   const begin = bundle.indexOf(WORKER_BEGIN);
   const end = bundle.indexOf(WORKER_END);
   if (begin < 0 || end < 0 || end < begin) {

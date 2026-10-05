@@ -97,7 +97,7 @@ export async function renderPdf(
   }
 
   const pagesLabel = () => t("viewer.pdf.pages", { count: pageCount });
-  const label = toolbar.createEl("span", { cls: "sealbox-muted", text: pagesLabel() });
+  const label = toolbar.createSpan({ cls: "sealbox-muted", text: pagesLabel() });
   const zoomOut = toolbar.createEl("button", { text: "−" });
   const zoomIn = toolbar.createEl("button", { text: "+" });
 
@@ -112,12 +112,10 @@ export async function renderPdf(
       const page = await doc.getPage(index + 1);
       if (destroyed) return;
       const viewport = page.getViewport({ scale });
-      const canvas = document.createElement("canvas");
+      const canvas = createEl("canvas");
       const ratio = window.devicePixelRatio || 1;
       canvas.width = Math.floor(viewport.width * ratio);
       canvas.height = Math.floor(viewport.height * ratio);
-      canvas.style.width = "100%";
-      canvas.style.aspectRatio = `${viewport.width} / ${viewport.height}`;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("canvas is unavailable");
       ctx.scale(ratio, ratio);

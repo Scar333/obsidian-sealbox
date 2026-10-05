@@ -121,15 +121,9 @@ function line(message: string, error: unknown): string {
   return scrubForLog(`${message}${detail}`);
 }
 
+// Only the two levels something actually calls. A logger nobody uses is still a
+// way for data to escape, so there is no debug() or info() to reach for.
 export const log = {
-  debug(message: string): void {
-    if (!LOGGING_ENABLED) return;
-    console.debug(`${PREFIX} ${scrubForLog(message)}`);
-  },
-  info(message: string): void {
-    if (!LOGGING_ENABLED) return;
-    console.info(`${PREFIX} ${scrubForLog(message)}`);
-  },
   warn(message: string, error?: unknown): void {
     if (!LOGGING_ENABLED) return;
     console.warn(`${PREFIX} ${line(message, error)}`);

@@ -9,6 +9,10 @@ on:
 
 permissions:
   contents: write
+  # Required by attest-build-provenance: it signs the release assets so anyone
+  # can verify they were built by this workflow from this repository.
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -31,6 +35,20 @@ jobs:
       - run: npm run build
       - run: npm run verify   # fails if the bundle gained network or logging
 
+      # The build carries no timestamp and no other varying input, so the same
+      # commit always produces the same bytes. The community directory checks
+      # this; so can anyone else, with `npm ci && npm run build`.
+      - name: Check the build is reproducible
+        run: |
+          sha_a=$(sha256sum main.js | cut -d' ' -f1)
+          npm run build
+          sha_b=$(sha256sum main.js | cut -d' ' -f1)
+          if [ "$sha_a" != "$sha_b" ]; then
+            echo "main.js is not reproducible: $sha_a vs $sha_b"
+            exit 1
+          fi
+          echo "main.js sha256: $sha_a"
+
       - name: Check the tag matches manifest.json
         run: |
           manifest_version=$(node -p "require('./manifest.json').version")
@@ -38,6 +56,11 @@ jobs:
             echo "tag $GITHUB_REF_NAME does not match manifest version $manifest_version"
             exit 1
           fi
+
+      - name: Attest the release assets
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "main.js, styles.css"
 
       - name: Create draft release
         env:

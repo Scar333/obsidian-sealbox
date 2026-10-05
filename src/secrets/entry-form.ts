@@ -44,7 +44,7 @@ export function renderEntryForm(
 
   // Password: masked by default, with reveal, copy and generate beside it.
   const pwWrap = form.createEl("label", { cls: "sealbox-field" });
-  pwWrap.createEl("span", { text: t("secrets.field.password") });
+  pwWrap.createSpan({ text: t("secrets.field.password") });
   const pwRow = pwWrap.createDiv({ cls: "sealbox-field-row" });
   const pwInput = pwRow.createEl("input", { type: "password" });
   pwInput.value = entry.password;
@@ -65,7 +65,7 @@ export function renderEntryForm(
     pwInput.type = "text";
     revealButton.setText(t("common.hide"));
   });
-  pwWrap.createEl("div", {
+  pwWrap.createDiv({
     cls: "sealbox-muted sealbox-small",
     text: t("secrets.generatorInfo", {
       length: deps.generator.length,
@@ -82,12 +82,12 @@ export function renderEntryForm(
   // --- links ---------------------------------------------------------------
   // Local copies, written back only when `read` is called.
   const urls = [...entry.urls];
-  form.createEl("div", { cls: "sealbox-section-title", text: t("secrets.field.links") });
+  form.createDiv({ cls: "sealbox-section-title", text: t("secrets.field.links") });
   const linksEl = form.createDiv({ cls: "sealbox-field-list" });
   const renderLinks = () => {
     linksEl.empty();
     if (urls.length === 0) {
-      linksEl.createEl("div", {
+      linksEl.createDiv({
         cls: "sealbox-muted sealbox-small",
         text: t("secrets.field.noLinks"),
       });
@@ -133,7 +133,7 @@ export function renderEntryForm(
 
   // --- extra fields --------------------------------------------------------
   const extra: SecretField[] = entry.extra.map((field) => ({ ...field }));
-  form.createEl("div", { cls: "sealbox-section-title", text: t("secrets.field.extra") });
+  form.createDiv({ cls: "sealbox-section-title", text: t("secrets.field.extra") });
   const extraEl = form.createDiv({ cls: "sealbox-field-list" });
   const renderExtra = () => {
     extraEl.empty();
@@ -191,7 +191,7 @@ export function renderEntryForm(
   const tagsInput = textField(form, t("secrets.field.tags"), entry.tags.join(", "));
 
   const noteWrap = form.createEl("label", { cls: "sealbox-field" });
-  noteWrap.createEl("span", { text: t("secrets.field.note") });
+  noteWrap.createSpan({ text: t("secrets.field.note") });
   const noteInput = noteWrap.createEl("textarea", { cls: "sealbox-note" });
   noteInput.value = entry.note;
 
@@ -215,7 +215,7 @@ export function renderEntryForm(
 
 function textField(parent: HTMLElement, label: string, value: string): HTMLInputElement {
   const wrap = parent.createEl("label", { cls: "sealbox-field" });
-  wrap.createEl("span", { text: label });
+  wrap.createSpan({ text: label });
   const input = wrap.createEl("input", { type: "text" });
   input.value = value;
   input.setAttribute("autocomplete", "off");

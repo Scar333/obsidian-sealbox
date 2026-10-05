@@ -1,6 +1,6 @@
 {
   "name": "obsidian-sealbox",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Encrypted notes, attachments and secrets for Obsidian.",
   "type": "module",
   "private": true,
@@ -22,9 +22,8 @@
     "@lezer/common": "^1.5.3",
     "@lezer/highlight": "^1.2.5",
     "@types/node": "^22.0.0",
-    "builtin-modules": "^4.0.0",
     "esbuild": "^0.28.2",
-    "obsidian": "latest",
+    "obsidian": "1.8.7",
     "tslib": "^2.8.0",
     "typescript": "^5.6.0"
   },

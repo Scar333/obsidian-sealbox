@@ -236,20 +236,20 @@ export class DiagnosticsModal extends Modal {
     contentEl.createEl("h3", { text: t("diag.title") });
     contentEl.createEl("p", { cls: "sealbox-muted sealbox-small", text: t("diag.intro") });
     const status = contentEl.createEl("p", { text: t("diag.running") });
-    const list = contentEl.createEl("div", { cls: "sealbox-checks" });
+    const list = contentEl.createDiv({ cls: "sealbox-checks" });
 
     this.results = await runDiagnostics(this.host);
     status.remove();
 
     for (const result of this.results) {
       const row = list.createDiv({ cls: "sealbox-check" });
-      row.createEl("span", {
+      row.createSpan({
         cls: result.ok ? "sealbox-check-ok" : "sealbox-check-fail",
         text: result.ok ? "✓" : "✗",
       });
       const body = row.createDiv();
-      body.createEl("div", { cls: "sealbox-check-name", text: result.name });
-      body.createEl("div", { cls: "sealbox-small sealbox-muted", text: result.detail });
+      body.createDiv({ cls: "sealbox-check-name", text: result.name });
+      body.createDiv({ cls: "sealbox-small sealbox-muted", text: result.detail });
     }
 
     const failed = this.results.filter((r) => !r.ok);

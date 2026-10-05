@@ -39,7 +39,7 @@ import { log, userMessage } from "./log.ts";
 import type { SealboxHost } from "./host.ts";
 
 export default class SealboxPlugin extends Plugin implements SealboxHost {
-  override settings: SealboxSettings = { ...DEFAULT_SETTINGS };
+  settings: SealboxSettings = { ...DEFAULT_SETTINGS };
   controller!: VaultController;
   ops!: SealedFileOps;
   secrets!: SecretsStore;
@@ -138,9 +138,6 @@ export default class SealboxPlugin extends Plugin implements SealboxHost {
    *
    * Command names live in Obsidian's global command list, so they are not
    * re-read on their own: the commands have to be removed and added again.
-   * `removeCommand` only exists from Obsidian 1.7.2, so on anything older the
-   * palette keeps the old names until the next reload — everything else still
-   * switches immediately.
    */
   applyLanguage(): void {
     setLanguage(resolveLanguage(this.settings.language, getLanguage()));
@@ -298,10 +295,7 @@ export default class SealboxPlugin extends Plugin implements SealboxHost {
 
   /** (Re)register every command under the current language. */
   private registerCommands(): void {
-    for (const id of this.commandIds) {
-      // Guard: removeCommand only exists from Obsidian 1.7.2.
-      if (typeof this.removeCommand === "function") this.removeCommand(id);
-    }
+    for (const id of this.commandIds) this.removeCommand(id);
     this.commandIds = [];
     const add = (command: Command): void => {
       this.addCommand(command);
@@ -461,7 +455,7 @@ export default class SealboxPlugin extends Plugin implements SealboxHost {
           if (!text.startsWith("sealbox:")) continue;
           const id = text.slice("sealbox:".length).trim();
           if (!/^[0-9a-f]{8,64}$/.test(id)) continue;
-          const chip = document.createElement("a");
+          const chip = createEl("a");
           chip.addClass("sealbox-chip");
           chip.setText(t("chip.secret"));
           chip.setAttribute("href", "#");

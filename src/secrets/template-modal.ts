@@ -47,11 +47,11 @@ class TemplateModal extends Modal {
     const list = contentEl.createDiv({ cls: "sealbox-template-list" });
     for (const template of TEMPLATE_IDS) {
       const card = list.createDiv({ cls: "sealbox-template" });
-      card.createEl("div", {
+      card.createDiv({
         cls: "sealbox-template-name",
         text: templateName(template),
       });
-      card.createEl("div", {
+      card.createDiv({
         cls: "sealbox-muted sealbox-small",
         text: t(DESC_KEYS[template]),
       });

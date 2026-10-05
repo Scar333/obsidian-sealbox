@@ -234,14 +234,14 @@ export class SealedView extends FileView {
     this.contentEl.empty();
 
     const header = this.contentEl.createDiv({ cls: "sealbox-header" });
-    header.createEl("span", { cls: "sealbox-header-name", text: meta.name });
-    header.createEl("span", {
+    header.createSpan({ cls: "sealbox-header-name", text: meta.name });
+    header.createSpan({
       cls: "sealbox-muted sealbox-small",
       text: t("view.meta", { mime: meta.mime, size: formatBytes(meta.size) }),
     });
 
     const actions = header.createDiv({ cls: "sealbox-header-actions" });
-    this.statusEl = header.createEl("span", { cls: "sealbox-status sealbox-small" });
+    this.statusEl = header.createSpan({ cls: "sealbox-status sealbox-small" });
 
     if (isEditable(this.kind)) {
       const toggle = actions.createEl("button", {

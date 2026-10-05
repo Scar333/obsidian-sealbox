@@ -22,7 +22,7 @@ export class VaultLockedError extends Error {
 
 export class VaultSession {
   private masterKey: CryptoKey | null = null;
-  private timer: ReturnType<typeof setTimeout> | null = null;
+  private timer: number | null = null;
   private listeners = new Set<(state: SessionState) => void>();
   private autoLockMs: number;
 
@@ -93,13 +93,13 @@ export class VaultSession {
   private restartTimer(): void {
     this.clearTimer();
     if (this.autoLockMs > 0) {
-      this.timer = setTimeout(() => this.lock(), this.autoLockMs);
+      this.timer = window.setTimeout(() => this.lock(), this.autoLockMs);
     }
   }
 
   private clearTimer(): void {
     if (this.timer !== null) {
-      clearTimeout(this.timer);
+      window.clearTimeout(this.timer);
       this.timer = null;
     }
   }
@@ -118,7 +118,7 @@ export class AttemptThrottle {
 
   async beforeAttempt(): Promise<void> {
     const delay = this.delayMs();
-    if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+    if (delay > 0) await new Promise((r) => window.setTimeout(r, delay));
   }
 
   recordFailure(): void {

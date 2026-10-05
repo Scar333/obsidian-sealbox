@@ -43,6 +43,8 @@ ciphertext, so renaming `report.pdf.sealed` to `a.sealed` loses nothing.
 
 ## Install
 
+Requires Obsidian 1.8.7 or newer, on desktop or Android.
+
 Until it reaches the community catalogue: download `main.js`, `manifest.json` and
 `styles.css` from the latest release into `<vault>/.obsidian/plugins/sealbox/`,
 then enable Sealbox under Community plugins.
@@ -237,6 +239,41 @@ Anything path-shaped is redacted before printing.
 
 The only file the plugin writes that is not ciphertext is the diagnostics report,
 and only when you press the button.
+
+Two things a scanner will notice, and what they are:
+
+**Clipboard.** A secrets manager has to copy passwords, so the plugin reads and
+writes the system clipboard. Nothing is copied unless you press a copy button,
+and the clipboard is wiped after a delay you set in the settings — the only
+exception is Android, where other apps can read the clipboard while the password
+is in it. That warning is in the setting's own description, not just here.
+
+**Dynamic code execution.** `eval` and `new Function` appear nowhere in `src/`.
+They come from the bundled pdf.js worker. pdf.js is started with
+`isEvalSupported: false`, so it compiles no font programs at runtime, and the
+worker's global scope has its network APIs and `console` replaced before a single
+line of it runs. The trade is a little font fidelity for not executing anything
+that arrived inside a document.
+
+## Reproducible builds
+
+`main.js` contains nothing that varies between builds — no timestamp, no build
+host, no random identifier. The same commit always produces the same bytes, so
+you can check that a published release really was built from this source:
+
+```sh
+git checkout 0.1.1
+npm ci && npm run build
+sha256sum main.js
+```
+
+That hash is printed in the Release workflow's log, and `npm run verify` fails if
+anything varying is ever added to the bundle. Releases also carry GitHub build
+provenance attestations:
+
+```sh
+gh attestation verify main.js --repo Scar333/obsidian-sealbox
+```
 
 ## git and Syncthing
 

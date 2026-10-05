@@ -55,9 +55,9 @@ class PasswordModal extends Modal {
       : null;
 
     const strengthEl = this.request.showStrength
-      ? contentEl.createEl("div", { cls: "sealbox-strength" })
+      ? contentEl.createDiv({ cls: "sealbox-strength" })
       : null;
-    const errorEl = contentEl.createEl("div", { cls: "sealbox-error" });
+    const errorEl = contentEl.createDiv({ cls: "sealbox-error" });
     errorEl.hide();
 
     const refresh = () => {
@@ -98,7 +98,7 @@ class PasswordModal extends Modal {
       });
     }
 
-    const buttons = contentEl.createEl("div", { cls: "sealbox-buttons" });
+    const buttons = contentEl.createDiv({ cls: "sealbox-buttons" });
     const ok = buttons.createEl("button", {
       text: this.request.submitLabel ?? t("common.unlock"),
       cls: "mod-cta",
@@ -114,8 +114,8 @@ class PasswordModal extends Modal {
 
   private addField(parent: HTMLElement, label: string): HTMLInputElement {
     const wrap = parent.createEl("label", { cls: "sealbox-field" });
-    wrap.createEl("span", { text: label });
-    const row = wrap.createEl("div", { cls: "sealbox-field-row" });
+    wrap.createSpan({ text: label });
+    const row = wrap.createDiv({ cls: "sealbox-field-row" });
     const input = row.createEl("input", { type: "password" });
     input.autocapitalize = "off";
     input.spellcheck = false;

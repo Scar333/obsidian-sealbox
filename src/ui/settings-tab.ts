@@ -133,7 +133,7 @@ export class SealboxSettingTab extends PluginSettingTab {
           }),
       );
 
-    const kdfNote = containerEl.createEl("div", { cls: "setting-item-description" });
+    const kdfNote = containerEl.createDiv({ cls: "setting-item-description" });
     runQuietly("describe kdf", async () => {
       const params = await this.host.controller.kdfParams();
       kdfNote.setText(t("settings.kdf.onThisDevice", { kdf: describeKdf(params) }));
@@ -274,7 +274,7 @@ export class SealboxSettingTab extends PluginSettingTab {
           .onClick(() => new DiagnosticsModal(this.app, this.host).open()),
       );
 
-    containerEl.createEl("div", {
+    containerEl.createDiv({
       cls: "setting-item-description sealbox-threat-model",
       text: t("settings.threatModel"),
     });

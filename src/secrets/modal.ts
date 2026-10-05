@@ -85,7 +85,7 @@ export class SecretsModal extends Modal {
     // Clear fields before the DOM goes away, so no input keeps a password in a
     // detached node that is still reachable from a stale reference.
     for (const input of Array.from(this.contentEl.querySelectorAll("input, textarea"))) {
-      if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
+      if (input.instanceOf(HTMLInputElement) || input.instanceOf(HTMLTextAreaElement)) {
         input.value = "";
       }
     }
@@ -143,13 +143,13 @@ export class SecretsModal extends Modal {
     const db = this.db;
     if (!db) return;
     this.groupsEl.empty();
-    this.groupsEl.createEl("div", { cls: "sealbox-pane-title", text: t("secrets.groups") });
+    this.groupsEl.createDiv({ cls: "sealbox-pane-title", text: t("secrets.groups") });
 
     const makeRow = (label: string, value: string | null, count: number) => {
       const row = this.groupsEl.createDiv({ cls: "sealbox-row" });
       row.toggleClass("is-selected", this.group === value);
-      row.createEl("span", { text: label });
-      row.createEl("span", { cls: "sealbox-count", text: String(count) });
+      row.createSpan({ text: label });
+      row.createSpan({ cls: "sealbox-count", text: String(count) });
       row.addEventListener("click", () => {
         this.group = value;
         this.pane = "list";
@@ -194,7 +194,7 @@ export class SecretsModal extends Modal {
     for (const entry of results) {
       const row = this.listEl.createDiv({ cls: "sealbox-card" });
       row.toggleClass("is-selected", entry.id === this.selectedId);
-      row.createEl("div", {
+      row.createDiv({
         cls: "sealbox-card-title",
         text: entry.title || t("common.untitled"),
       });
@@ -202,20 +202,20 @@ export class SecretsModal extends Modal {
       // opening every entry in turn.
       const line = (label: string, value: string) => {
         if (!value) return;
-        const el = row.createEl("div", { cls: "sealbox-card-line sealbox-small" });
-        el.createEl("span", { cls: "sealbox-card-label", text: `${label}: ` });
-        el.createEl("span", { text: value });
+        const el = row.createDiv({ cls: "sealbox-card-line sealbox-small" });
+        el.createSpan({ cls: "sealbox-card-label", text: `${label}: ` });
+        el.createSpan({ text: value });
       };
       line(t("secrets.field.username"), entry.username);
       line(t("secrets.field.url"), entry.urls[0] ?? "");
       line(t("secrets.field.note"), entry.note.split("\n")[0] ?? "");
       const chips = row.createDiv({ cls: "sealbox-card-chips" });
-      chips.createEl("span", {
+      chips.createSpan({
         cls: "sealbox-chip-static",
         text: groupLabel(entry.group || UNGROUPED),
       });
       if (entry.template !== "custom") {
-        chips.createEl("span", {
+        chips.createSpan({
           cls: "sealbox-chip-static",
           text: templateName(entry.template),
         });
@@ -269,7 +269,7 @@ export class SecretsModal extends Modal {
       });
       for (const item of entry.history) {
         const row = details.createDiv({ cls: "sealbox-row" });
-        row.createEl("span", {
+        row.createSpan({
           cls: "sealbox-small",
           text: new Date(item.replaced).toLocaleString(),
         });
@@ -280,7 +280,7 @@ export class SecretsModal extends Modal {
       }
     }
 
-    this.detailEl.createEl("div", {
+    this.detailEl.createDiv({
       cls: "sealbox-muted sealbox-small",
       text: t("secrets.timestamps", {
         created: new Date(entry.created).toLocaleString(),

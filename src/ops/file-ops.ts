@@ -185,10 +185,16 @@ export class SealedFileOps {
   /**
    * Get rid of the plaintext original once the sealed copy is known good.
    *
-   * The subtlety is `Vault.trash(file, true)`: it only *tries* the system trash
-   * and silently falls back to the vault's own `.trash` folder. For a plaintext
-   * original that fallback is a leak — the file is still inside the vault, so git
-   * and Syncthing copy it to the other devices and into history.
+   * This is the one place that deliberately does not use
+   * `FileManager.trashFile`, which honours the user's deletion preference. One
+   * of those preferences is Obsidian's own `.trash` folder, which lives *inside*
+   * the vault: git and Syncthing would copy the plaintext to every other device
+   * and into history. The user asked for this file to be encrypted, so the
+   * preference that would undo that is the one we do not follow.
+   *
+   * `Vault.trash(file, true)` has the same problem from the other side — it only
+   * tries the system trash and falls back to `.trash` silently — so when it is
+   * used, the fallback is swept immediately afterwards.
    */
   private async disposeOriginal(file: TFile, settings: SealboxSettings): Promise<void> {
     switch (settings.originalHandling) {
@@ -197,6 +203,7 @@ export class SealedFileOps {
         return;
 
       case "permanent":
+        // The user picked "delete permanently" for plaintext originals.
         await this.app.vault.delete(file);
         return;
 
@@ -250,7 +257,9 @@ export class SealedFileOps {
       const desired = folder && folder !== "/" ? `${folder}/${meta.name}` : meta.name;
       const target = await uniquePath(this.adapter, desired);
       await writeAtomic(this.adapter, target, data);
-      await this.app.vault.trash(file, true);
+      // The file being removed here is the encrypted one, so whatever the user's
+      // deletion preference is, nothing readable ends up in the trash.
+      await this.app.fileManager.trashFile(file);
       return target;
     } finally {
       zero(data);

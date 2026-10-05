@@ -102,7 +102,7 @@ class QuickAddModal extends Modal {
     // Clear the fields before the DOM goes, so nothing holds a password in a
     // detached node.
     for (const el of Array.from(this.contentEl.querySelectorAll("input, textarea"))) {
-      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      if (el.instanceOf(HTMLInputElement) || el.instanceOf(HTMLTextAreaElement)) {
         el.value = "";
       }
     }
