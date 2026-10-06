@@ -12,6 +12,15 @@
   gap: 8px;
   margin-top: 12px;
 }
+/*
+ * On a phone a dialog fills the screen, so a button row pinned to the left edge
+ * sits a long way from the thumb and reads as if it belongs to nothing. Centre
+ * it there. The reveal button is not in this row — it lives beside its input,
+ * where it belongs — so it keeps its place.
+ */
+body.is-mobile .sealbox-modal .sealbox-buttons {
+  justify-content: center;
+}
 
 .sealbox-field {
   display: block;

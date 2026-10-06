@@ -230,7 +230,12 @@ export class DiagnosticsModal extends Modal {
     super(app);
   }
 
-  override async onOpen(): Promise<void> {
+  /** See the note on SecretsModal.onOpen: a rejection here would reach nobody. */
+  override onOpen(): void {
+    runAction("run the self-tests", () => this.build());
+  }
+
+  private async build(): Promise<void> {
     const { contentEl } = this;
     contentEl.addClass("sealbox-modal");
     contentEl.createEl("h3", { text: t("diag.title") });

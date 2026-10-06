@@ -59,7 +59,17 @@ export class SecretsModal extends Modal {
     super(app);
   }
 
-  override async onOpen(): Promise<void> {
+  /**
+   * `Modal.onOpen` is declared to return nothing, so Obsidian calls it and drops
+   * whatever comes back. An `async` one therefore hands its rejection to nobody:
+   * the window would open empty with no error anywhere. The work goes through
+   * `runAction`, which is the one path that always reports.
+   */
+  override onOpen(): void {
+    runAction("open the secrets window", () => this.build());
+  }
+
+  private async build(): Promise<void> {
     this.modalEl.addClass("sealbox-secrets-modal");
     this.unsubscribe = this.host.controller.session.onChange((state) => {
       if (state === "locked") {

@@ -255,3 +255,20 @@ test("paths and file names are redacted on the way into a log", () => {
   // And a user-facing message keeps its file name: `scrub` is the other level.
   assert.ok(scrub("could not open Divorce papers.pdf").includes("Divorce papers.pdf"));
 });
+
+test("no Modal opens with an async onOpen", async () => {
+  // `Modal.onOpen` returns void, so Obsidian calls it and throws the result
+  // away. An `async` one hands its rejection to nobody: the window opens empty
+  // and nothing anywhere says why. Async work belongs in a method of its own,
+  // started through runAction. `ItemView.onOpen` is declared to return a
+  // promise and is a different case.
+  const offenders: string[] = [];
+  for (const file of await sourceFiles()) {
+    const code = stripComments(await readFile(file, "utf8"));
+    if (!/\bextends\s+(?:\w+)?Modal\b/.test(code)) continue;
+    if (/\basync\s+onOpen\s*\(/.test(code)) {
+      offenders.push(relative(ROOT, file));
+    }
+  }
+  assert.deepEqual(offenders, []);
+});

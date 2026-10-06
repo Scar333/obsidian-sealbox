@@ -41,6 +41,30 @@ File names, sizes, timestamps and folder structure stay visible; only contents a
 encrypted. The original name and media type of a sealed file live inside the
 ciphertext, so renaming `report.pdf.sealed` to `a.sealed` loses nothing.
 
+### What happens to the plaintext original
+
+Sealing writes the `.sealed` file, decrypts it again and checks it byte for byte,
+and only then removes the original. What "removes" means is a setting, and one of
+the choices is deliberately missing.
+
+Obsidian's own deletion preference can send a deleted file to `.trash` **inside
+the vault**. For a file you just asked to encrypt, that is not deletion: git
+commits it, Syncthing copies it to every other device, and the plaintext outlives
+the vault it came from. So sealing does not follow that preference. On desktop it
+asks the system trash and then checks `.trash` for a copy that appeared in the
+last few seconds, removing it and telling you it did. On Android, where there is
+no system trash to ask, it deletes outright.
+
+This is the one place the plugin overrides a user preference, and it is why the
+automated review reports `Vault.delete` where `FileManager.trashFile` is
+expected. Removing a `.sealed` file, or the sealed copy after decrypting back to
+plaintext, does follow your preference as usual — that file is ciphertext, and
+nothing readable reaches the trash.
+
+If you would rather keep the original, **Settings → Sealbox → After sealing, the
+original is → Kept** does exactly that, and says in the same breath that the file
+stays readable and stays synced.
+
 ## Install
 
 Requires Obsidian 1.8.7 or newer, on desktop or Android.
@@ -300,7 +324,7 @@ everything.
 
 ```sh
 npm install        # the only step that ever needs the network
-npm run check      # types, 93 tests, build, release gate
+npm run check      # types, 94 tests, build, release gate
 npm run build      # build only, into ./main.js
 npm run dev        # rebuild on save
 ```
