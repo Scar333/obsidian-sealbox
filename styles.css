@@ -13,12 +13,15 @@
   margin-top: 12px;
 }
 /*
- * On a phone a dialog fills the screen, so a button row pinned to the left edge
- * sits a long way from the thumb and reads as if it belongs to nothing. Centre
- * it there. The reveal button is not in this row — it lives beside its input,
- * where it belongs — so it keeps its place.
+ * A dialog's buttons sit under its own heading and fields, and reading left to
+ * right you expect them where the eye already is — the middle. Pinned to the
+ * left edge they drift away from everything above them, and on a phone, where
+ * the dialog fills the screen, away from the thumb as well.
+ *
+ * Only the dialog's own row. The reveal button beside a password field is not in
+ * it: that one belongs to its input and stays there.
  */
-body.is-mobile .sealbox-modal .sealbox-buttons {
+.sealbox-modal .sealbox-buttons {
   justify-content: center;
 }
 
@@ -68,8 +71,9 @@ body.is-mobile .sealbox-modal .sealbox-buttons {
  * Everything on the lock screen is centred, and its buttons have to be too. The
  * container centres as a block on its own, but once the screen is narrow enough
  * for the buttons to wrap — which is the normal case on a phone — each wrapped
- * row packs to the start and the layout looks off-centre. Scoped to this screen:
- * buttons in dialogs stay left-aligned.
+ * row packs to the start and the layout looks off-centre. Dialogs centre their
+ * buttons too, but they do it on their own container; this rule is for the
+ * full-width lock screen.
  */
 .sealbox-locked .sealbox-buttons {
   width: 100%;
