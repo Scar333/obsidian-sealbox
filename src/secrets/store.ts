@@ -26,6 +26,8 @@ const BACKUP_SUFFIX = ".bak";
 
 export class SecretsStore {
   private db: SecretsDb | null = null;
+  private generation = 0;
+  private pending: Promise<SecretsDb> | null = null;
 
   constructor(private host: SealboxHost) {}
 
@@ -39,6 +41,7 @@ export class SecretsStore {
 
   /** Drop the decrypted database. Wired to the session lock. */
   forget(): void {
+    this.generation++;
     this.db = null;
   }
 
@@ -47,13 +50,17 @@ export class SecretsStore {
   }
 
   async load(): Promise<SecretsDb> {
+    this.host.controller.session.requireKey();
+    const generation = this.generation;
     if (this.db) return this.db;
     if (!(await this.exists())) {
+      this.checkGeneration(generation);
       this.db = emptyDb();
       return this.db;
     }
     const { data } = await this.host.ops.readSealedAtPath(this.path);
     try {
+      this.checkGeneration(generation);
       this.db = normalizeDb(JSON.parse(fromUtf8(data)));
       return this.db;
     } catch (e) {
@@ -64,7 +71,37 @@ export class SecretsStore {
     }
   }
 
-  async save(db: SecretsDb): Promise<void> {
+  private checkGeneration(generation: number): void {
+    this.host.controller.session.requireKey();
+    if (generation !== this.generation) throw new Error(t("vault.locked"));
+  }
+
+  /** Apply a change against the latest database, serialising all local writers. */
+  async update(change: (db: SecretsDb) => SecretsDb | Promise<SecretsDb>): Promise<SecretsDb> {
+    const generation = this.generation;
+    while (this.pending) {
+      try { await this.pending; } catch { /* The next operation can retry. */ }
+    }
+    this.checkGeneration(generation);
+    const task = this.applyUpdate(change, generation);
+    this.pending = task;
+    try {
+      return await task;
+    } finally {
+      this.pending = null;
+    }
+  }
+
+  private async applyUpdate(
+    change: (db: SecretsDb) => SecretsDb | Promise<SecretsDb>, generation: number,
+  ): Promise<SecretsDb> {
+    const db = await change(await this.load());
+    this.checkGeneration(generation);
+    await this.write(db, generation);
+    return db;
+  }
+
+  private async write(db: SecretsDb, generation: number): Promise<void> {
     const payload = utf8(JSON.stringify(db));
     try {
       // Keep the previous container before replacing it. One generation is
@@ -78,6 +115,7 @@ export class SecretsStore {
         payload,
         defaultMeta(basename(this.path).replace(/\.sealed$/, "") + ".json", "application/json", payload.length),
       );
+      this.checkGeneration(generation);
       this.db = db;
     } finally {
       zero(payload);
@@ -103,13 +141,17 @@ export class SecretsStore {
     const candidates = conflictCandidates(listing.files, this.path);
     if (candidates.length === 0) return 0;
 
-    const outcome = await foldConflicts(await this.load(), candidates, async (path) => {
-      const { data } = await this.host.ops.readSealedAtPath(path);
-      try {
-        return normalizeDb(JSON.parse(fromUtf8(data)));
-      } finally {
-        zero(data);
-      }
+    let outcome!: Awaited<ReturnType<typeof foldConflicts>>;
+    await this.update(async (db) => {
+      outcome = await foldConflicts(db, candidates, async (path) => {
+        const { data } = await this.host.ops.readSealedAtPath(path);
+        try {
+          return normalizeDb(JSON.parse(fromUtf8(data)));
+        } finally {
+          zero(data);
+        }
+      });
+      return outcome.db;
     });
 
     for (const path of outcome.failed) {
@@ -121,7 +163,6 @@ export class SecretsStore {
 
     // Write the merged result first, and only then remove the copies that are
     // actually represented in it. A failure above never costs an entry.
-    await this.save(outcome.db);
     for (const path of outcome.merged) {
       try {
         await this.adapter.remove(path);

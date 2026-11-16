@@ -127,3 +127,101 @@ test("the standalone tool refuses a wrong password and a tampered file", async (
     (e: unknown) => /integrity check/.test(String((e as { stderr?: string }).stderr)),
   );
 });
+
+// Real plugin writers -> independent recovery reader, across every supported mode.
+import { attachRecoveryKey } from "../src/crypto/keyring.ts";
+import { generateRecoveryKey } from "../src/crypto/recovery.ts";
+import { access, copyFile } from "node:fs/promises";
+import { build } from "esbuild";
+
+const ARGON_CHEAP: KdfParams = { id: 1, memoryKiB: 64, time: 1, lanes: 1, iterations: 0 };
+for (const params of [PBKDF2_CHEAP, ARGON_CHEAP]) {
+  for (const cascade of [false, true]) {
+    for (const own of [false, true]) {
+      test(`recovery reader: kdf=${params.id}, cascade=${cascade}, own password=${own}`, async () => {
+        const dir = await workdir();
+        const password = utf8("пароль with spaces 🦭");
+        const { file, masterKey } = await createKeyring(password, params);
+        const plain = randomBytes(40 * 1024 + 1);
+        const container = await seal(plain, defaultMeta("notes.bin", "application/octet-stream", plain.length),
+          own ? { kind: "password", password, params } : { kind: "vault", masterKey }, { cascade, chunkKiB: 16 });
+        await writeFile(join(dir, "input.sealed"), container);
+        await writeFile(join(dir, "keyring.json"), JSON.stringify(file));
+        // Windows editor: BOM + CRLF; password itself must remain unchanged.
+        await writeFile(join(dir, "pw"), "\uFEFF" + new TextDecoder().decode(password) + "\r\n");
+        await run(process.execPath, [TOOL, join(dir, "input.sealed"), "--keyring", join(dir, "keyring.json"), "--password-file", join(dir, "pw"), "--out", join(dir, "out")]);
+        assert.deepEqual(new Uint8Array(await readFile(join(dir, "out"))), plain);
+      });
+    }
+  }
+}
+
+test("recovery key opens an Argon2id vault with cascade, even without the password", async () => {
+  const dir = await workdir();
+  const pw = utf8("lost master password");
+  const { file, masterKey } = await createKeyring(pw, ARGON_CHEAP);
+  const recovery = await generateRecoveryKey();
+  const keyring = await attachRecoveryKey(file, pw, recovery.raw);
+  const plain = utf8("recovered without Obsidian");
+  await writeFile(join(dir, "keyring.json"), JSON.stringify(keyring));
+  await writeFile(join(dir, "recovery.txt"), recovery.display);
+  await writeFile(join(dir, "input.sealed"), await seal(plain, defaultMeta("recovered.txt", "text/plain", plain.length), { kind: "vault", masterKey }, { cascade: true }));
+  await run(process.execPath, [TOOL, join(dir, "input.sealed"), "--keyring", join(dir, "keyring.json"), "--recovery-key-file", join(dir, "recovery.txt"), "--out", join(dir, "out")]);
+  assert.deepEqual(new Uint8Array(await readFile(join(dir, "out"))), plain);
+  await writeFile(join(dir, "recovery.txt"), "0".repeat(55));
+  await assert.rejects(() => run(process.execPath, [TOOL, join(dir, "input.sealed"), "--keyring", join(dir, "keyring.json"), "--recovery-key-file", join(dir, "recovery.txt"), "--out", join(dir, "bad")]), (e: any) => /checksum|does not match/.test(e.stderr));
+  await assert.rejects(access(join(dir, "bad")));
+});
+
+test("reader never overwrites input or existing output, and damaged files produce no plaintext", async () => {
+  const dir = await workdir();
+  const password = utf8("pw");
+  const data = utf8("hello");
+  const c = await seal(data, defaultMeta("safe.txt", "text/plain", data.length), { kind: "password", password, params: PBKDF2_CHEAP });
+  const input = join(dir, "input.sealed"), pw = join(dir, "pw"), output = join(dir, "out");
+  await writeFile(input, c); await writeFile(pw, password); await writeFile(output, "KEEP");
+  const args = [TOOL, input, "--password-file", pw, "--out"];
+  for (const target of [input, output]) {
+    await assert.rejects(() => run(process.execPath, [...args, target]), (e: any) => /already exists/.test(e.stderr));
+  }
+  assert.deepEqual(new Uint8Array(await readFile(input)), c);
+  assert.equal(await readFile(output, "utf8"), "KEEP");
+  for (const broken of [c.slice(0, 48 + new DataView(c.buffer).getUint32(40, true)), c.slice()]) {
+    if (broken.length === c.length) broken[broken.length - 1] ^= 1;
+    await writeFile(input, broken);
+    await assert.rejects(() => run(process.execPath, [...args, join(dir, "absent")]), (e: any) => /truncated|integrity/.test(e.stderr));
+    await assert.rejects(access(join(dir, "absent")));
+  }
+});
+
+test("reader rejects traversal metadata and invalid CLI options", async () => {
+  const dir = await workdir();
+  const pw = join(dir, "pw"), input = join(dir, "in.sealed");
+  await writeFile(pw, "pw");
+  await writeFile(input, await seal(utf8("x"), defaultMeta("../escape.txt", "text/plain", 1), { kind: "password", password: utf8("pw"), params: PBKDF2_CHEAP }));
+  await assert.rejects(() => run(process.execPath, [TOOL, input, "--password-file", pw, "--out", join(dir, "out")]), (e: any) => /unsafe original name/.test(e.stderr));
+  for (const args of [[input, "--out"], [input, input], [input, "--recovery"], [input, "--unknown"]]) {
+    await assert.rejects(() => run(process.execPath, [TOOL, ...args]));
+  }
+  const { stdout } = await run(process.execPath, [TOOL, "--help"]);
+  assert.match(stdout, /--recovery/);
+});
+
+test("bundled recovery file runs outside the repository without node_modules", async () => {
+  const dir = await workdir();
+  const bundled = join(dir, "sealbox-decrypt.mjs");
+  // Bundle exactly as the release pack does, then copy away from its module tree.
+  await build({ entryPoints: [TOOL], outfile: bundled, bundle: true, platform: "node", format: "esm", target: "node22", legalComments: "eof" });
+  const pw = utf8("offline password");
+  const { file, masterKey } = await createKeyring(pw, ARGON_CHEAP);
+  const recovery = await generateRecoveryKey();
+  const keyring = await attachRecoveryKey(file, pw, recovery.raw);
+  await writeFile(join(dir, "keyring.json"), JSON.stringify(keyring));
+  await writeFile(join(dir, "recovery.txt"), recovery.display);
+  await writeFile(join(dir, "input.sealed"), await seal(utf8("offline"), defaultMeta("offline.txt", "text/plain", 7), { kind: "vault", masterKey }, { cascade: true }));
+  await run(process.execPath, [bundled, join(dir, "input.sealed"), "--keyring", join(dir, "keyring.json"), "--recovery-key-file", join(dir, "recovery.txt"), "--out", join(dir, "out")], { cwd: dir });
+  assert.equal(await readFile(join(dir, "out"), "utf8"), "offline");
+  // Plain source on its own reports missing helpers truthfully.
+  await copyFile(TOOL, join(dir, "source.mjs"));
+  await assert.rejects(() => run(process.execPath, [join(dir, "source.mjs"), join(dir, "input.sealed"), "--keyring", join(dir, "keyring.json"), "--recovery-key-file", join(dir, "recovery.txt"), "--out", join(dir, "missing")]), (e: any) => /helper is missing/.test(e.stderr));
+});

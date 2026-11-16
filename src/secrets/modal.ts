@@ -8,13 +8,13 @@
 
 import { App, Modal, Notice, Platform } from "obsidian";
 import type { SealboxHost } from "../host.ts";
-import { log, userMessage } from "../log.ts";
+import { userMessage } from "../log.ts";
 import { copyWithAutoClear } from "./clipboard.ts";
 import { confirmAction } from "../ui/confirm.ts";
 import { runAction, runQuietly } from "../ui/run.ts";
 import { t } from "../i18n/index.ts";
 import { askTemplate, templateName } from "./template-modal.ts";
-import { renderEntryForm } from "./entry-form.ts";
+import { renderEntryForm, type EntryForm } from "./entry-form.ts";
 import type { MessageKey } from "../i18n/index.ts";
 import {
   DEFAULT_GENERATOR,
@@ -39,6 +39,11 @@ function groupLabel(group: string): string {
 
 export class SecretsModal extends Modal {
   private db: SecretsDb | null = null;
+  private form: EntryForm | null = null;
+  private closed = false;
+  private mutating = false;
+  private navigating = false;
+  private forceClose = false;
   private query = "";
   private group: string | null = null;
   private selectedId: string | null = null;
@@ -70,10 +75,12 @@ export class SecretsModal extends Modal {
   }
 
   private async build(): Promise<void> {
-    this.modalEl.addClass("sealbox-secrets-modal");
+    this.modalEl.addClass("sealbox-secrets-modal", "sealbox-dialog");
+    this.setTitle(t("secrets.title"));
     this.unsubscribe = this.host.controller.session.onChange((state) => {
       if (state === "locked") {
-        new Notice(t("secrets.lockedClosed"));
+        new Notice(t(this.form?.isDirty() ? "secrets.lockedUnsaved" : "secrets.lockedClosed"), 10000);
+        this.forceClose = true;
         this.close();
       }
     });
@@ -84,12 +91,26 @@ export class SecretsModal extends Modal {
       this.contentEl.createEl("p", { cls: "sealbox-error", text: userMessage(e) });
       return;
     }
+    if (this.closed || !this.host.controller.isUnlocked) return;
     if (this.focusId) this.selectedId = this.focusId;
     this.buildFrame();
     this.renderAll();
   }
 
+  override close(): void {
+    if (this.forceClose || !this.form?.isDirty()) {
+      super.close();
+      return;
+    }
+    runAction("confirm closing secrets", () => this.navigate(async () => {
+      this.forceClose = true;
+      this.close();
+    }));
+  }
+
   override onClose(): void {
+    this.closed = true;
+    this.form = null;
     this.unsubscribe?.();
     this.unsubscribe = null;
     // Clear fields before the DOM goes away, so no input keeps a password in a
@@ -113,6 +134,7 @@ export class SecretsModal extends Modal {
       type: "search",
       placeholder: t("secrets.searchPlaceholder"),
     });
+    searchInput.setAttribute("aria-label", t("secrets.searchPlaceholder"));
     searchInput.addEventListener("input", () => {
       this.query = searchInput.value;
       this.host.controller.session.touch();
@@ -120,7 +142,7 @@ export class SecretsModal extends Modal {
     });
     const addButton = top.createEl("button", { text: t("common.new"), cls: "mod-cta" });
     addButton.addEventListener("click", () =>
-      runAction("create secret", () => this.createEntry()),
+      runAction("create secret", () => this.navigate(() => this.mutate(() => this.createEntry()))),
     );
 
     const panes = contentEl.createDiv({ cls: "sealbox-secrets-panes" });
@@ -156,7 +178,8 @@ export class SecretsModal extends Modal {
     this.groupsEl.createDiv({ cls: "sealbox-pane-title", text: t("secrets.groups") });
 
     const makeRow = (label: string, value: string | null, count: number) => {
-      const row = this.groupsEl.createDiv({ cls: "sealbox-row" });
+      const row = this.groupsEl.createEl("button", { cls: "sealbox-row" });
+      row.setAttribute("aria-pressed", String(this.group === value));
       row.toggleClass("is-selected", this.group === value);
       row.createSpan({ text: label });
       row.createSpan({ cls: "sealbox-count", text: String(count) });
@@ -202,7 +225,8 @@ export class SecretsModal extends Modal {
     }
 
     for (const entry of results) {
-      const row = this.listEl.createDiv({ cls: "sealbox-card" });
+      const row = this.listEl.createEl("button", { cls: "sealbox-card" });
+      row.setAttribute("aria-pressed", String(entry.id === this.selectedId));
       row.toggleClass("is-selected", entry.id === this.selectedId);
       row.createDiv({
         cls: "sealbox-card-title",
@@ -231,11 +255,18 @@ export class SecretsModal extends Modal {
         });
       }
       row.addEventListener("click", () => {
-        this.selectedId = entry.id;
-        this.pane = "detail";
-        this.applyPane();
-        this.renderList();
-        this.renderDetail();
+        if (entry.id === this.selectedId) {
+          this.pane = "detail";
+          this.applyPane();
+          return;
+        }
+        runAction("select secret", () => this.navigate(async () => {
+          this.selectedId = entry.id;
+          this.pane = "detail";
+          this.applyPane();
+          this.renderList();
+          this.renderDetail();
+        }));
       });
     }
   }
@@ -246,6 +277,7 @@ export class SecretsModal extends Modal {
   }
 
   private renderDetail(): void {
+    this.form = null;
     this.detailEl.empty();
     const entry = this.selected();
     if (!entry) {
@@ -271,6 +303,8 @@ export class SecretsModal extends Modal {
       clipboardClearSeconds: this.host.settings.clipboardClearSeconds,
       generator: this.generator,
     });
+
+    this.form = form;
 
     if (entry.history.length > 0) {
       const details = this.detailEl.createEl("details", { cls: "sealbox-history" });
@@ -302,12 +336,12 @@ export class SecretsModal extends Modal {
     const save = buttons.createEl("button", { text: t("common.save"), cls: "mod-cta" });
     save.addEventListener("click", () =>
       runAction("save secret", () =>
-        this.commit(entry, form.read()),
+        this.mutate(() => this.commit(entry, form.read())),
       ),
     );
     const del = buttons.createEl("button", { text: t("common.delete"), cls: "mod-warning" });
     del.addEventListener("click", () =>
-      runAction("delete secret", () => this.deleteEntry(entry)),
+      runAction("delete secret", () => this.mutate(() => this.deleteEntry(entry))),
     );
 
     const linkButton = buttons.createEl("button", { text: t("secrets.copyLink") });
@@ -342,18 +376,18 @@ export class SecretsModal extends Modal {
       ...field,
       label: t(`secrets.label.${field.label}` as MessageKey),
     }));
-    this.db = upsert(this.db, entry);
+    if (this.closed || !this.host.controller.isUnlocked) return;
+    this.db = await this.store.update((db) => upsert(db, entry));
     this.selectedId = entry.id;
     this.pane = "detail";
-    await this.persist();
     this.applyPane();
     this.renderAll();
   }
 
   private async commit(entry: SecretEntry, changes: Partial<SecretEntry>): Promise<void> {
     if (!this.db) return;
-    this.db = upsert(this.db, touchEntry(entry, changes));
-    await this.persist();
+    this.db = await this.store.update((db) => upsert(db, touchEntry(entry, changes)));
+    if (this.closed) return;
     this.renderAll();
     new Notice(t("secrets.saved"));
   }
@@ -368,21 +402,48 @@ export class SecretsModal extends Modal {
       destructive: true,
     });
     if (!ok) return;
-    this.db = remove(this.db, entry.id);
+    if (this.closed || !this.host.controller.isUnlocked) return;
+    this.db = await this.store.update((db) => remove(db, entry.id));
     this.selectedId = null;
     this.pane = "list";
-    await this.persist();
     this.applyPane();
     this.renderAll();
   }
 
-  private async persist(): Promise<void> {
-    if (!this.db) return;
+  private async mutate(action: () => Promise<void>): Promise<void> {
+    if (this.mutating || this.closed) return;
+    this.mutating = true;
+    this.contentEl.setAttribute("aria-busy", "true");
+    const controls = Array.from(this.contentEl.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement>("button, input, textarea"));
+    const disabled = controls.map((control) => control.disabled);
+    for (const control of controls) control.disabled = true;
     try {
-      await this.store.save(this.db);
+      await action();
     } catch (e) {
-      log.error("could not save the secrets database", e);
       new Notice(t("secrets.saveFailed", { error: userMessage(e) }), 10000);
+    } finally {
+      this.mutating = false;
+      this.contentEl.removeAttribute("aria-busy");
+      controls.forEach((control, index) => { control.disabled = disabled[index]; });
+    }
+  }
+
+  private async navigate(action: () => Promise<void>): Promise<void> {
+    if (this.navigating || this.mutating || this.closed) return;
+    this.navigating = true;
+    try {
+      if (this.form?.isDirty()) {
+        const discard = await confirmAction(this.app, {
+          title: t("secrets.unsaved.title"),
+          body: t("secrets.unsaved.body"),
+          confirmLabel: t("secrets.unsaved.discard"),
+          destructive: true,
+        });
+        if (!discard || this.closed) return;
+      }
+      await action();
+    } finally {
+      this.navigating = false;
     }
   }
 }

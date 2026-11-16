@@ -29,6 +29,7 @@ export interface EntryForm {
   /** The current values, shaped for `touchEntry`. */
   read(): Partial<SecretEntry>;
   focusFirst(): void;
+  isDirty(): boolean;
 }
 
 export function renderEntryForm(
@@ -101,6 +102,7 @@ export function renderEntryForm(
       input.addEventListener("input", () => {
         urls[index] = input.value;
       });
+      input.setAttribute("aria-label", t("secrets.field.links"));
       const open = row.createEl("button", { text: t("secrets.open") });
       open.addEventListener("click", () => {
         const value = input.value.trim();
@@ -108,7 +110,7 @@ export function renderEntryForm(
           new Notice(t("secrets.onlyHttp"));
           return;
         }
-        window.open(value, "_blank");
+        window.open(value, "_blank", "noopener,noreferrer");
       });
       const copy = row.createEl("button", { text: t("common.copy") });
       copy.addEventListener("click", () => {
@@ -158,10 +160,12 @@ export function renderEntryForm(
       });
 
       const mask = row.createEl("button", { text: t("secrets.field.secretToggle") });
+      mask.setAttribute("aria-pressed", String(field.secret));
       mask.toggleClass("is-active", field.secret);
       mask.addEventListener("click", () => {
         field.secret = !field.secret;
         valueInput.type = field.secret ? "password" : "text";
+        mask.setAttribute("aria-pressed", String(field.secret));
         mask.toggleClass("is-active", field.secret);
       });
       const copy = row.createEl("button", { text: t("common.copy") });
@@ -195,8 +199,7 @@ export function renderEntryForm(
   const noteInput = noteWrap.createEl("textarea", { cls: "sealbox-note" });
   noteInput.value = entry.note;
 
-  return {
-    read: () => ({
+  const read = (): Partial<SecretEntry> => ({
       title: titleInput.value.trim(),
       group: groupInput.value.trim() || UNGROUPED,
       username: userInput.value,
@@ -208,9 +211,9 @@ export function renderEntryForm(
         .split(",")
         .map((tag) => tag.trim())
         .filter((tag) => tag.length > 0),
-    }),
-    focusFirst: () => titleInput.focus(),
-  };
+    });
+  const initial = JSON.stringify(read());
+  return { read, isDirty: () => JSON.stringify(read()) !== initial, focusFirst: () => titleInput.focus() };
 }
 
 function textField(parent: HTMLElement, label: string, value: string): HTMLInputElement {

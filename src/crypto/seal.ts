@@ -350,6 +350,7 @@ export async function unseal(
   const full = header.chunkKiB * 1024 + ov;
 
   const keys = await deriveFileKeys(header, source);
+  const parts: Uint8Array[] = [];
   try {
     let meta: SealedMeta;
     let metaPlain: Uint8Array;
@@ -373,7 +374,6 @@ export async function unseal(
       zero(metaPlain);
     }
 
-    const parts: Uint8Array[] = [];
     let produced = 0;
     for (let i = 0; i < chunks; i++) {
       if (options.signal?.aborted) throw new Error("cancelled");
@@ -412,6 +412,9 @@ export async function unseal(
     }
     return { meta, data };
   } finally {
+    // concat creates the returned payload; these per-block buffers are no
+    // longer needed, including when a later block fails or the read is cancelled.
+    for (const part of parts) zero(part);
     keys.destroy();
   }
 }

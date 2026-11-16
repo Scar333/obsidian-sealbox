@@ -176,7 +176,9 @@
   display: flex;
   gap: 8px;
   align-items: center;
-  margin-bottom: 10px;
+  margin: 12px 0 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
 }
 .sealbox-search { flex: 1 1 auto; min-width: 0; }
 
@@ -402,4 +404,122 @@
   max-height: min(68vh, 560px);
   overflow-y: auto;
   padding-right: 4px;
+}
+
+/* Dialog chrome stays separate from primary actions, including theme variants
+   that position the native close control over the top-right content corner. */
+.sealbox-dialog {
+  border-radius: var(--radius-l, 14px);
+}
+.sealbox-dialog .modal-title,
+.sealbox-dialog .sealbox-modal > h3:first-child {
+  padding-inline-end: 48px;
+  line-height: 1.4;
+  margin-top: 4px;
+  margin-bottom: 20px;
+}
+.sealbox-dialog .modal-close-button {
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+}
+.sealbox-dialog button,
+.sealbox-dialog input:not([type="checkbox"]),
+.sealbox-header button {
+  min-height: 36px;
+}
+.sealbox-dialog .sealbox-buttons > button {
+  max-width: 100%;
+  height: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding: 8px 12px;
+}
+.sealbox-recovery-command {
+  padding: 12px;
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  user-select: text;
+}
+.sealbox-dialog button:focus-visible,
+.sealbox-header button:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 3px;
+}
+.sealbox-modal > .sealbox-buttons:last-child {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--background-modifier-border);
+  gap: 12px;
+}
+.sealbox-quickadd-modal { width: min(720px, 94vw); }
+.sealbox-secrets-modal .modal-title { font-size: var(--font-ui-large); }
+.sealbox-secrets-top { flex-wrap: wrap; gap: 12px; }
+.sealbox-secrets-top .sealbox-search { flex-basis: 240px; }
+.sealbox-secrets-top > button { flex: 0 0 auto; }
+.sealbox-secrets-modal .sealbox-pane { padding: 12px; border-radius: var(--radius-m); }
+.sealbox-pane-title { color: var(--text-muted); margin-bottom: 12px; }
+/* Native buttons make cards and groups reachable with Tab, Enter and Space. */
+button.sealbox-row,
+button.sealbox-card,
+button.sealbox-template {
+  width: 100%;
+  height: auto;
+  text-align: start;
+  color: var(--text-normal);
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  white-space: normal;
+}
+button.sealbox-row { justify-content: flex-start; border: 0; margin-bottom: 4px; }
+button.sealbox-card { align-items: stretch; gap: 6px; padding: 14px; }
+button.sealbox-template { display: block; padding: 16px; }
+.sealbox-template-name { margin-bottom: 6px; }
+.sealbox-card.is-selected { border-inline-start: 3px solid var(--interactive-accent); }
+.sealbox-card-label { color: var(--text-muted); }
+.sealbox-pane-detail > .sealbox-buttons {
+  position: sticky;
+  bottom: -12px;
+  z-index: 1;
+  background: var(--background-primary);
+  padding: 12px 0;
+  border-top: 1px solid var(--background-modifier-border);
+}
+.sealbox-pane-detail > .sealbox-buttons > .mod-warning {
+  margin-inline-start: auto;
+  order: 2;
+}
+.sealbox-field { margin-top: 14px; }
+.sealbox-field > span { margin-bottom: 7px; color: var(--text-muted); }
+.sealbox-field-row { gap: 8px; }
+.sealbox-field-row input { flex-basis: 140px; }
+.sealbox-field-row .sealbox-field-label { flex-basis: 110px; }
+.sealbox-header { gap: 12px; padding: 12px 16px; }
+.sealbox-header-name { min-width: 0; overflow-wrap: anywhere; }
+.sealbox-header-actions { flex-wrap: wrap; gap: 8px; }
+.sealbox-status { overflow-wrap: anywhere; min-width: 0; }
+.sealbox-pdf-toolbar { flex-wrap: wrap; }
+.sealbox-locked {
+  margin-top: 32px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-l, 14px);
+  background: var(--background-secondary);
+}
+@media (max-width: 760px) {
+  .sealbox-secrets-panes { grid-template-columns: 1fr; min-height: 0; }
+  .sealbox-pane { max-height: 55vh; }
+  .sealbox-dialog button, .sealbox-header button { min-height: 44px; }
+  .sealbox-secrets-top .sealbox-search { flex-basis: 100%; }
+  .sealbox-secrets-top > button { width: 100%; }
+  .sealbox-header-actions { width: 100%; margin-left: 0; }
+  .sealbox-status { text-align: start; }
+  .sealbox-pane-detail > .sealbox-buttons { gap: 8px; }
+  .sealbox-pane-detail > .sealbox-buttons > .mod-cta { flex: 1 1 100%; }
+  .sealbox-pane-detail > .sealbox-buttons > button:not(.mod-cta) {
+    flex: 1 1 auto;
+    font-size: var(--font-ui-smaller);
+  }
+  .sealbox-locked { margin-top: 16px; padding: 32px 16px; }
 }

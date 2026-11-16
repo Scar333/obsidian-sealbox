@@ -50,7 +50,7 @@ export class SealedView extends FileView {
   private autosaveTimer: number | null = null;
   private bodyEl: HTMLElement | null = null;
   private statusEl: HTMLElement | null = null;
-  private busy = false;
+  private generation = 0;
 
   constructor(leaf: WorkspaceLeaf, host: SealboxHost) {
     super(leaf);
@@ -75,6 +75,7 @@ export class SealedView extends FileView {
       if (state === "locked") {
         // Not a redraw: an unconditional wipe. This runs from the idle timer and
         // from the user's explicit "lock now".
+        if (this.dirty) new Notice(t("view.lockedUnsaved"), 10000);
         this.discardPlaintext();
         if (this.file) this.renderLocked(this.file);
       } else if (this.file && !this.plain) {
@@ -84,9 +85,13 @@ export class SealedView extends FileView {
   }
 
   override async onClose(): Promise<void> {
-    this.unsubscribe?.();
-    this.unsubscribe = null;
-    this.discardPlaintext();
+    try {
+      if (this.dirty && this.host.controller.isUnlocked) await this.save();
+    } finally {
+      this.unsubscribe?.();
+      this.unsubscribe = null;
+      this.discardPlaintext();
+    }
   }
 
   override async onLoadFile(file: TFile): Promise<void> {
@@ -122,6 +127,7 @@ export class SealedView extends FileView {
    * left at all.
    */
   private discardPlaintext(): void {
+    this.generation++;
     if (this.autosaveTimer !== null) {
       window.clearTimeout(this.autosaveTimer);
       this.autosaveTimer = null;
@@ -199,19 +205,23 @@ export class SealedView extends FileView {
   }
 
   private async openPayload(file: TFile): Promise<void> {
-    if (this.busy) return;
-    this.busy = true;
+    const generation = ++this.generation;
     try {
       const { meta, data } = await this.host.ops.readSealed(file);
+      if (generation !== this.generation || !this.host.controller.isUnlocked) {
+        zero(data);
+        return;
+      }
+      zero(this.plain);
       this.meta = meta;
       this.plain = data;
       this.kind = viewerFor(meta.mime, meta.name);
       await this.renderUnlocked();
     } catch (e) {
       log.warn("could not open a sealed file", e);
-      this.renderError(file, userMessage(e));
-    } finally {
-      this.busy = false;
+      if (generation === this.generation && this.host.controller.isUnlocked) {
+        this.renderError(file, userMessage(e));
+      }
     }
   }
 
@@ -271,7 +281,10 @@ export class SealedView extends FileView {
     });
 
     const lock = actions.createEl("button", { text: t("common.lock") });
-    lock.addEventListener("click", () => this.host.controller.lock());
+    lock.addEventListener("click", () => runAction("save and lock", async () => {
+      if (this.dirty || this.saves.hasWork) await this.save();
+      this.host.controller.lock();
+    }));
 
     this.refreshStatus();
 
@@ -325,7 +338,13 @@ export class SealedView extends FileView {
             text: t("view.renderingPdf"),
           });
           try {
-            this.viewer = await renderPdf(body, plain);
+            const generation = this.generation;
+            const viewer = await renderPdf(body, plain);
+            if (generation !== this.generation || body !== this.bodyEl) {
+              viewer.destroy();
+              return;
+            }
+            this.viewer = viewer;
             placeholder.remove();
           } catch (e) {
             placeholder.remove();
@@ -365,7 +384,8 @@ export class SealedView extends FileView {
   }
 
   private async renderEditor(parent: HTMLElement, plain: Uint8Array): Promise<void> {
-    this.editor = await createEditor(
+    const generation = this.generation;
+    const editor = await createEditor(
       parent,
       {
         initialValue: this.decodeText(plain),
@@ -383,7 +403,12 @@ export class SealedView extends FileView {
       },
       { rich: this.host.settings.richEditor },
     );
-    this.editor.focus();
+    if (generation !== this.generation || parent !== this.bodyEl || !this.editing) {
+      editor.destroy();
+      return;
+    }
+    this.editor = editor;
+    editor.focus();
   }
 
   private scheduleAutosave(): void {
@@ -461,12 +486,17 @@ export class SealedView extends FileView {
     // that was in fact saved, so Preview claimed unsaved changes forever.
     if (!file || !meta || !editor) return;
 
+    const generation = this.generation;
     const explicit = this.explicitSaveWanted;
     this.explicitSaveWanted = false;
     const text = editor.getValue();
     const bytes = utf8(text);
     try {
       await this.host.ops.writeSealedToFile(file, bytes, { ...meta, mtime: Date.now() });
+      if (generation !== this.generation || !this.host.controller.isUnlocked) {
+        zero(bytes);
+        return;
+      }
       zero(this.plain);
       this.plain = bytes;
       this.meta = { ...meta, size: bytes.length, mtime: Date.now() };
@@ -482,6 +512,7 @@ export class SealedView extends FileView {
     } catch (e) {
       // Leave `dirty` set: the text is still in the editor, so the next autosave
       // or an explicit retry can still succeed.
+      zero(bytes);
       log.error("could not save a sealed note", e);
       new Notice(t("view.saveFailed", { error: userMessage(e) }), 10000);
       throw e;

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+<title id="title">SealBox logo</title><desc id="desc">A geometric box closed with a lavender coloured seal.</desc>
+<g font-family="DejaVu Sans, Arial, sans-serif"><rect x="0" y="0" width="256" height="256" rx="48" fill="#171225" stroke="#171225"/><g transform="translate(28 22) scale(1)" stroke-linejoin="round">
+    <path d="M100 8 184 56 184 154 100 202 16 154 16 56Z" fill="#241c36" stroke="#c4a0ff" stroke-width="3"/>
+    <path d="M16 56 100 105 184 56M100 105V202" fill="none" stroke="#c4a0ff" stroke-width="3"/>
+    <path d="m57 32 85 49v42l-29 17V98L29 49Z" fill="#c4a0ff"/>
+    <path d="m64 126 15 9v28l-15-9Z" fill="#f5f0ff"/>
+    </g></g></svg>

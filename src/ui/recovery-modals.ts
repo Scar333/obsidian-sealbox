@@ -16,6 +16,9 @@ import { runAction, runQuietly } from "./run.ts";
 
 export class ShowRecoveryKeyModal extends Modal {
   private confirmed = false;
+  private closed = false;
+  private expected: Uint8Array | null = null;
+  private comparison = 0;
 
   constructor(
     app: App,
@@ -26,6 +29,7 @@ export class ShowRecoveryKeyModal extends Modal {
 
   override onOpen(): void {
     const { contentEl } = this;
+    this.modalEl.addClass("sealbox-dialog");
     contentEl.addClass("sealbox-modal");
     contentEl.createEl("h3", { text: t("recovery.show.title") });
     contentEl.createEl("p", { text: t("recovery.show.body") });
@@ -64,15 +68,19 @@ export class ShowRecoveryKeyModal extends Modal {
     });
     done.disabled = true;
 
-    let expected: Uint8Array | null = null;
     runQuietly("parse generated recovery key", async () => {
-      expected = await parseRecoveryKey(this.displayKey);
+      const expected = await parseRecoveryKey(this.displayKey);
+      if (this.closed) { zero(expected); return; }
+      this.expected = expected;
     });
 
     input.addEventListener("input", () => {
       runQuietly("compare recovery key", async () => {
-        if (!expected) return;
-        const ok = await recoveryKeyMatches(input.value, expected);
+        if (!this.expected || this.closed) return;
+        const comparison = ++this.comparison;
+        const value = input.value;
+        const ok = await recoveryKeyMatches(value, this.expected);
+        if (this.closed || comparison !== this.comparison || value !== input.value) return;
         done.disabled = !ok;
         feedback.setText(
           input.value.trim().length === 0
@@ -87,20 +95,24 @@ export class ShowRecoveryKeyModal extends Modal {
 
     done.addEventListener("click", () => {
       this.confirmed = true;
-      zero(expected);
-      expected = null;
+      zero(this.expected);
+      this.expected = null;
       this.close();
     });
 
     const later = buttons.createEl("button", { text: t("common.cancel") });
     later.addEventListener("click", () => {
-      zero(expected);
-      expected = null;
+      zero(this.expected);
+      this.expected = null;
       this.close();
     });
   }
 
   override onClose(): void {
+    this.closed = true;
+    zero(this.expected);
+    this.expected = null;
+    this.displayKey = "";
     // Wipe the on-screen copy, and warn if the user never confirmed it.
     this.contentEl.empty();
     if (!this.confirmed) {
@@ -120,6 +132,7 @@ export class EnterRecoveryKeyModal extends Modal {
 
   override onOpen(): void {
     const { contentEl } = this;
+    this.modalEl.addClass("sealbox-dialog");
     contentEl.addClass("sealbox-modal");
     contentEl.createEl("h3", {
       text:
@@ -166,4 +179,32 @@ export class EnterRecoveryKeyModal extends Modal {
     }
     this.contentEl.empty();
   }
+}
+
+/** Offline instructions remain available even when a browser is unavailable. */
+export class RecoveryHelpModal extends Modal {
+  constructor(app: App, private keyringPath: string) { super(app); }
+
+  override onOpen(): void {
+    this.modalEl.addClass("sealbox-dialog");
+    this.setTitle(t("recovery.help.title"));
+    this.contentEl.addClass("sealbox-modal");
+    this.contentEl.createEl("p", { text: t("recovery.help.intro") });
+    this.contentEl.createEl("p", { text: t("recovery.help.backup", { keyring: this.keyringPath }) });
+    this.contentEl.createEl("p", { text: t("recovery.help.pack") });
+    this.contentEl.createEl("pre", {
+      cls: "sealbox-pre sealbox-recovery-command",
+      text: 'node sealbox-decrypt.mjs "file.sealed" --keyring "keyring.json" --out "restored.bin"',
+    });
+    this.contentEl.createEl("p", { text: t("recovery.help.forgot") });
+    this.contentEl.createEl("pre", {
+      cls: "sealbox-pre sealbox-recovery-command",
+      text: 'node sealbox-decrypt.mjs "file.sealed" --keyring "keyring.json" --recovery --out "restored.bin"',
+    });
+    this.contentEl.createEl("p", { cls: "sealbox-warning", text: t("recovery.help.warning") });
+    const buttons = this.contentEl.createDiv({ cls: "sealbox-buttons" });
+    buttons.createEl("button", { text: t("common.close") }).addEventListener("click", () => this.close());
+  }
+
+  override onClose(): void { this.contentEl.empty(); }
 }

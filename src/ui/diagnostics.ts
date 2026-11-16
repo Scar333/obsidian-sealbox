@@ -237,6 +237,7 @@ export class DiagnosticsModal extends Modal {
 
   private async build(): Promise<void> {
     const { contentEl } = this;
+    this.modalEl.addClass("sealbox-dialog");
     contentEl.addClass("sealbox-modal");
     contentEl.createEl("h3", { text: t("diag.title") });
     contentEl.createEl("p", { cls: "sealbox-muted sealbox-small", text: t("diag.intro") });

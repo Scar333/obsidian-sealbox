@@ -37,6 +37,7 @@ class PasswordModal extends Modal {
 
   override onOpen(): void {
     const { contentEl } = this;
+    this.modalEl.addClass("sealbox-dialog");
     contentEl.addClass("sealbox-modal");
     contentEl.createEl("h3", { text: this.request.title });
     if (this.request.description) {

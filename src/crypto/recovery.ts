@@ -44,6 +44,7 @@ function base32Encode(bytes: Uint8Array): string {
 function base32Decode(text: string): Uint8Array {
   const clean = text.toUpperCase().replace(/[\s-]/g, "");
   if (clean.length === 0) throw new RecoveryKeyError(t("recoveryKey.empty"));
+  if (clean.length !== 55) throw new RecoveryKeyError(t("recoveryKey.length"));
   const bytes: number[] = [];
   let acc = 0;
   let bits = 0;
@@ -55,6 +56,7 @@ function base32Decode(text: string): Uint8Array {
       bytes.push((acc >>> bits) & 0xff);
     }
   }
+  if ((acc & ((1 << bits) - 1)) !== 0) throw new RecoveryKeyError(t("recoveryKey.checksum"));
   return new Uint8Array(bytes);
 }
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.4
+
+- Wipe intermediate decrypted block buffers on success, corruption and cancellation; add a regression test.
+- Update installation instructions for the existing Obsidian directory listing and document the internal security review.
+- Separate secrets-window title and toolbar; improve spacing, keyboard access, narrow layouts and theme integration.
+- Confirm discarding edited entries; prevent duplicate saves and false success after a failed write. Serialize local secrets updates.
+- Discard stale decryption/editor/PDF results after a lock or navigation; flush edits before closing a view or using its Lock button.
+- Support Argon2id, recovery keys and cascade in the independent recovery reader; hide credential input and refuse output overwrites.
+- Add an offline recovery pack, English/Russian recovery guides and illustrated README pages.
+
 ## 0.1.3
 
 Dialog buttons are centred on desktop as well as on a phone. 0.1.2 centred them

@@ -275,3 +275,28 @@ test("recovering with a key keeps that key working afterwards", async () => {
   await unlockWithRecoveryKey(reset, raw);
   await unlockKeyring(reset, pw("fresh"));
 });
+
+test("recovery keys reject extra characters and noncanonical padding", async () => {
+  const { display, raw } = await generateRecoveryKey();
+  for (const bad of [display + "0", display + "00000000", display.slice(0, -1)]) {
+    await assert.rejects(() => parseRecoveryKey(bad));
+  }
+  const compact = display.replaceAll("-", "");
+  const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  const last = alphabet.indexOf(compact.at(-1)!);
+  await assert.rejects(() => parseRecoveryKey(compact.slice(0, -1) + alphabet[last | 1]));
+  assert.deepEqual(await parseRecoveryKey(display), raw);
+});
+
+test("keyring refuses hostile KDF costs before deriving or allocating", async () => {
+  const { file } = await createKeyring(pw("test"), CHEAP);
+  for (const kdf of [
+    { ...file.kdf, id: 1, m: 1048577, t: 3, p: 1 },
+    { ...file.kdf, id: 1, m: 64, t: -1, p: 1 },
+    { ...file.kdf, id: 1, m: 64, t: 1, p: 0 },
+    { ...file.kdf, id: 2, iter: 0 },
+    { ...file.kdf, id: 2, iter: 20000001 },
+  ]) {
+    assert.throws(() => validateKeyring({ ...file, kdf }), KeyringDamagedError);
+  }
+});

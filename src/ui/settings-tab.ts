@@ -4,7 +4,7 @@ import type { SealboxHost } from "../host.ts";
 import { t } from "../i18n/index.ts";
 import { sanitizeVaultPath, type LanguageSetting } from "../settings.ts";
 import { DiagnosticsModal } from "./diagnostics.ts";
-import { EnterRecoveryKeyModal, ShowRecoveryKeyModal } from "./recovery-modals.ts";
+import { EnterRecoveryKeyModal, ShowRecoveryKeyModal, RecoveryHelpModal } from "./recovery-modals.ts";
 import { runAction, runQuietly } from "./run.ts";
 
 export class SealboxSettingTab extends PluginSettingTab {
@@ -261,6 +261,13 @@ export class SealboxSettingTab extends PluginSettingTab {
           .setButtonText(t("settings.forgot.button"))
           .onClick(() => new EnterRecoveryKeyModal(this.app, this.host, "reset").open()),
       );
+
+    new Setting(containerEl)
+      .setName(t("recovery.help.title"))
+      .setDesc(t("recovery.help.setting"))
+      .addButton((button) => button
+        .setButtonText(t("recovery.help.button"))
+        .onClick(() => new RecoveryHelpModal(this.app, this.host.controller.keyringPath).open()));
 
     new Setting(containerEl).setName(t("settings.diagnostics")).setHeading();
 

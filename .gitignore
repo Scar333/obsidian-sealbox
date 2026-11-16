@@ -4,3 +4,4 @@ main.js
 *.sealbox-tmp
 *.sealbox-old
 release-notes.md
+dist/

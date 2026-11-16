@@ -23,7 +23,8 @@ This is a one-person project, so a first reply may take a few days. If a fix is
 needed I will ship it as a patch release and credit you in the release notes
 unless you would rather stay anonymous.
 
-Sealbox has not had an independent security audit. If you are looking at the
-crypto, `README.md` specifies the container format byte for byte, and
+An AI-assisted internal code review and its limitations are documented in
+[the security review report](docs/SECURITY-REVIEW.ru.md). It is not presented as
+an independent third-party audit. If you are looking at the crypto, `docs/TECHNICAL.md` specifies the container format byte for byte, and
 `tools/sealbox-decrypt.mjs` is a second implementation of it that shares no code
 with the plugin.

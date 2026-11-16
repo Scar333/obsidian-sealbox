@@ -12,7 +12,7 @@
  */
 
 import { bs, fromBase64, randomBytes, toBase64, utf8, zero } from "./bytes.ts";
-import { SealedAuthError, SealedFormatError, KDF_ARGON2ID, KDF_PBKDF2_SHA512 } from "./container.ts";
+import { SealedAuthError, SealedFormatError, KDF_ARGON2ID, KDF_PBKDF2_SHA512, MAX_ARGON2_MEMORY_KIB } from "./container.ts";
 import { expandOnce, importAesKey, importHkdfBase, HKDF_INFO_RECOVERY } from "./hkdf.ts";
 import { deriveFromPassword, type KdfParams } from "./kdf.ts";
 import { t } from "../i18n/index.ts";
@@ -72,6 +72,15 @@ function storeKdf(params: KdfParams, salt: Uint8Array): StoredKdf {
 function loadKdf(stored: StoredKdf): { params: KdfParams; salt: Uint8Array } {
   if (stored.id !== KDF_ARGON2ID && stored.id !== KDF_PBKDF2_SHA512) {
     throw new KeyringDamagedError(t("crypto.keyringUnknownKdf"));
+  }
+  if (stored.id === KDF_ARGON2ID) {
+    if (!Number.isInteger(stored.m) || stored.m < 8 || stored.m > MAX_ARGON2_MEMORY_KIB ||
+        !Number.isInteger(stored.t) || stored.t < 1 || stored.t > 255 ||
+        !Number.isInteger(stored.p) || stored.p < 1 || stored.p > 255 || stored.m < 8 * stored.p) {
+      throw new KeyringDamagedError(t("crypto.keyringBadKdf"));
+    }
+  } else if (!Number.isInteger(stored.iter) || stored.iter < 10000 || stored.iter > 20000000) {
+    throw new KeyringDamagedError(t("crypto.keyringBadKdf"));
   }
   const salt = fromBase64(stored.salt);
   if (salt.length < 16) throw new KeyringDamagedError(t("crypto.keyringSaltShort"));
@@ -167,6 +176,7 @@ export function validateKeyring(data: unknown): KeyringFile {
       throw new KeyringDamagedError(t("crypto.keyringBadBox"));
     }
   }
+  loadKdf(k.kdf);
   return k as KeyringFile;
 }
 

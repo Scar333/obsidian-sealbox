@@ -264,3 +264,35 @@ test("two seals of identical input produce different ciphertext", async () => {
   assert.notDeepEqual(a.subarray(20, 40), b.subarray(20, 40), "salt/nonce must be fresh");
   assert.notDeepEqual(a.subarray(HEADER_SIZE), b.subarray(HEADER_SIZE));
 });
+
+test("unseal wipes intermediate plaintext on success, corruption and cancellation", async () => {
+  const source = await vaultSource();
+  const plain = new Uint8Array(40 * 1024).fill(0x71);
+  const container = await seal(plain, meta(plain.length), source, { chunkKiB: 16 });
+  const original = crypto.subtle.decrypt;
+  for (const mode of ["success", "corruption", "cancellation"]) {
+    const buffers: Uint8Array[] = [];
+    crypto.subtle.decrypt = async (...args: Parameters<SubtleCrypto["decrypt"]>) => {
+      const value = await original.apply(crypto.subtle, args);
+      buffers.push(new Uint8Array(value));
+      return value;
+    };
+    try {
+      const input = container.slice();
+      const signal = { aborted: false };
+      if (mode === "corruption") input[input.length - 1] ^= 1;
+      const work = unseal(input, source, {
+        signal,
+        onProgress: () => { if (mode === "cancellation") signal.aborted = true; },
+      });
+      if (mode === "success") {
+        const result = await work;
+        assert.deepEqual(result.data, plain, "returned payload must remain intact");
+      } else await assert.rejects(work);
+      assert.ok(buffers.length >= 2);
+      assert.ok(buffers.every(b => b.every(value => value === 0)), `intermediate plaintext survived ${mode}`);
+    } finally {
+      crypto.subtle.decrypt = original;
+    }
+  }
+});

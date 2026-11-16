@@ -8,24 +8,14 @@ plugin itself never makes a request at runtime.
 
 ## 1. Just use it (nothing to build)
 
-The plugin is already built into the vault at
-`My_test/.obsidian/plugins/sealbox/`. Three files are all that is required:
+Install **Sealbox** through **Settings → Community plugins → Browse**.
+The plugin is available in the [Obsidian directory](https://community.obsidian.md/plugins/sealbox).
+To update an existing installation, check for updates under Community plugins.
 
-```
-.obsidian/plugins/sealbox/
-├── main.js        the whole plugin, self-contained
-├── manifest.json
-└── styles.css
-```
-
-1. Open Obsidian.
-2. **Settings → Community plugins** → turn off Restricted mode if it is on.
-3. **Sealbox** should be listed and enabled. If you do not see it, press the
-   reload icon next to "Installed plugins", or run **Reload app without saving**
-   from the command palette (`Ctrl/Cmd-P`).
-
-To install into a different vault, copy those three files to
-`<that vault>/.obsidian/plugins/sealbox/` and enable it the same way.
+For a manual installation, download `main.js`, `manifest.json` and `styles.css`
+from the matching release and place them in `<vault>/.obsidian/plugins/sealbox/`.
+Reload Obsidian and enable the plugin. When updating, replace only these three
+files; preserve `keyring.json` and `data.json`.
 
 ### On Android
 
@@ -148,32 +138,25 @@ the encryption means.
 
 ### Reading a file without Obsidian
 
+See the step-by-step [local recovery guide](docs/RECOVERY.en.md) or
+[инструкция на русском](docs/RECOVERY.ru.md).
+
+The independent reader supports Argon2id, PBKDF2-SHA512, recovery keys and the
+optional XChaCha20 cascade. Build an offline pack with `npm ci` followed by
+`npm run recovery:build`, or use `sealbox-recovery.zip` when it is available in
+your release. Keep `dist/recovery/` alongside your backups; the bundled tool
+needs Node but no separately installed npm packages.
+
 ```sh
-cd obsidian-sealbox
-
-# A normal vault-keyed file (needs the keyring):
-node tools/sealbox-decrypt.mjs path/to/Report.pdf.sealed \
-  --keyring /path/to/vault/.obsidian/plugins/sealbox/keyring.json \
-  --out Report.pdf
-
-# A file that carries its own password, straight to stdout:
-node tools/sealbox-decrypt.mjs note.md.sealed --out -
+node sealbox-decrypt.mjs Report.pdf.sealed --keyring keyring.json --out Report.pdf
+# If the master password is forgotten:
+node sealbox-decrypt.mjs Report.pdf.sealed --keyring keyring.json --recovery --out Report.pdf
 ```
 
-The password is read from stdin, or from `--password-file <file>`, so it never
-reaches your shell history. The script depends on nothing but Node and implements
-the format from the specification in `README.md` — it shares no code with the
-plugin, and the test suite checks the two agree.
-
-It cannot do Argon2id on its own, because Node has no built-in Argon2. For a
-keyring on the Argon2id profile, run `npm i hash-wasm` in this folder first, or
-keep a PBKDF2 keyring as your archive copy
-(*Settings → Sealbox → Key derivation profile → PBKDF2-SHA512 only*, then change
-your master password once so the keyring is rewritten).
-
-**Keep a copy of `tools/sealbox-decrypt.mjs`, your `keyring.json` and your
-recovery key together, outside this vault.** Those three things are a complete
-escape hatch.
+Credentials are entered at a hidden prompt, never in the command itself.
+Keep the matching keyring, encrypted files and a valid password or configured
+recovery key. A recovery key alone cannot replace a lost keyring.
+Output files are readable plaintext; place them outside your synced vault.
 
 ---
 
@@ -326,7 +309,7 @@ Three things, stored together and outside this vault:
 
 1. `keyring.json` — from `.obsidian/plugins/sealbox/`.
 2. Your **recovery key**, on paper or encrypted separately.
-3. `tools/sealbox-decrypt.mjs` plus `README.md` (which holds the format spec).
+3. `tools/sealbox-decrypt.mjs` plus `docs/TECHNICAL.md` (which holds the format spec).
 
 With those three you can read your data on any machine with Node, forever,
 whether or not this plugin still exists.

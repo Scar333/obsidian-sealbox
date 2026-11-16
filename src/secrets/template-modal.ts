@@ -41,12 +41,13 @@ class TemplateModal extends Modal {
 
   override onOpen(): void {
     const { contentEl } = this;
+    this.modalEl.addClass("sealbox-dialog");
     contentEl.addClass("sealbox-modal");
     contentEl.createEl("h3", { text: t("secrets.template.choose") });
 
     const list = contentEl.createDiv({ cls: "sealbox-template-list" });
     for (const template of TEMPLATE_IDS) {
-      const card = list.createDiv({ cls: "sealbox-template" });
+      const card = list.createEl("button", { cls: "sealbox-template" });
       card.createDiv({
         cls: "sealbox-template-name",
         text: templateName(template),

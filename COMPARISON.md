@@ -159,7 +159,7 @@ interfaces, confirming the plugin needs the internet exactly once: `npm install`
 
 ### 10. The format is written down, and something else implements it
 
-`README.md` specifies the container byte for byte, and
+`docs/TECHNICAL.md` specifies the container byte for byte, and
 `tools/sealbox-decrypt.mjs` implements that specification independently, sharing
 no code with `src/`. The test suite checks the two agree on the same files. So the
 spec is verified rather than aspirational, and there is a way to read your data

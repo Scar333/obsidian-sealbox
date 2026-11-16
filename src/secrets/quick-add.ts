@@ -11,6 +11,7 @@ import { App, Modal, Notice } from "obsidian";
 import { t, type MessageKey } from "../i18n/index.ts";
 import type { SealboxHost } from "../host.ts";
 import { log, userMessage } from "../log.ts";
+import { confirmAction } from "../ui/confirm.ts";
 import { runAction } from "../ui/run.ts";
 import { renderEntryForm, type EntryForm } from "./entry-form.ts";
 import {
@@ -26,6 +27,10 @@ import type { SecretsStore } from "./store.ts";
 import { askTemplate, templateName } from "./template-modal.ts";
 
 class QuickAddModal extends Modal {
+  private saving = false;
+  private confirming = false;
+  private forceClose = false;
+  private closed = false;
   private form: EntryForm | null = null;
   private unsubscribe: (() => void) | null = null;
   private readonly draft: SecretEntry;
@@ -48,13 +53,14 @@ class QuickAddModal extends Modal {
   }
 
   override onOpen(): void {
-    this.modalEl.addClass("sealbox-secrets-modal");
+    this.modalEl.addClass("sealbox-quickadd-modal", "sealbox-dialog");
     const { contentEl } = this;
     contentEl.addClass("sealbox-modal");
 
     this.unsubscribe = this.host.controller.session.onChange((state) => {
       if (state === "locked") {
-        new Notice(t("secrets.lockedClosed"));
+        new Notice(t(this.form?.isDirty() ? "secrets.lockedUnsaved" : "secrets.lockedClosed"), 10000);
+        this.forceClose = true;
         this.close();
       }
     });
@@ -79,24 +85,50 @@ class QuickAddModal extends Modal {
 
   private async save(): Promise<void> {
     const form = this.form;
-    if (!form) return;
+    if (!form || this.saving || this.closed) return;
+    this.saving = true;
+    const controls = Array.from(this.contentEl.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement>("button, input, textarea"));
+    const disabled = controls.map((control) => control.disabled);
+    for (const control of controls) control.disabled = true;
     const changes = form.read();
     try {
-      const db = await this.store.load();
       const entry = touchEntry(this.draft, changes);
-      await this.store.save(upsert(db, entry));
+      await this.store.update((db) => upsert(db, entry));
+      if (this.closed) return;
       new Notice(
         t("quickAdd.saved", { title: entry.title || t("common.untitled") }),
         5000,
       );
+      this.forceClose = true;
       this.close();
     } catch (e) {
       log.error("could not save a quick-added secret", e);
       new Notice(t("secrets.saveFailed", { error: userMessage(e) }), 10000);
+    } finally {
+      this.saving = false;
+      controls.forEach((control, index) => { control.disabled = disabled[index]; });
     }
   }
 
+  override close(): void {
+    if (this.forceClose || !this.form?.isDirty()) { super.close(); return; }
+    if (this.saving || this.confirming) return;
+    this.confirming = true;
+    runAction("confirm closing new secret", async () => {
+      try {
+        if (await confirmAction(this.app, {
+          title: t("secrets.unsaved.title"), body: t("secrets.unsaved.body"),
+          confirmLabel: t("secrets.unsaved.discard"), destructive: true,
+        })) {
+          this.forceClose = true;
+          this.close();
+        }
+      } finally { this.confirming = false; }
+    });
+  }
+
   override onClose(): void {
+    this.closed = true;
     this.unsubscribe?.();
     this.unsubscribe = null;
     // Clear the fields before the DOM goes, so nothing holds a password in a
@@ -108,6 +140,10 @@ class QuickAddModal extends Modal {
     }
     this.contentEl.empty();
     this.form = null;
+    this.draft.password = "";
+    this.draft.username = "";
+    this.draft.note = "";
+    for (const field of this.draft.extra) field.value = "";
   }
 }
 
@@ -119,6 +155,6 @@ export async function quickAddSecret(
 ): Promise<void> {
   if (!(await host.controller.ensureUnlocked())) return;
   const template = await askTemplate(app);
-  if (!template) return;
+  if (!template || !host.controller.isUnlocked) return;
   new QuickAddModal(app, host, store, template).open();
 }
